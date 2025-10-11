@@ -59,21 +59,25 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const router = useRouter()
 
   useEffect(() => {
-    // GitHub profile will be loaded automatically through NextAuth callback
-    // The user object already contains GitHub data if authenticated with GitHub
-    if (user.login && user.public_repos !== undefined) {
-      // User has GitHub data, set it as the profile
-      setGithubProfile({
-        login: user.login,
-        name: user.name || '',
-        avatar_url: user.avatar_url || user.image || '',
-        bio: user.bio,
-        public_repos: user.public_repos || 0,
-        followers: user.followers || 0,
-        following: user.following || 0,
-        company: user.company,
-        location: user.location
-      })
+    try {
+      // GitHub profile will be loaded automatically through NextAuth callback
+      // The user object already contains GitHub data if authenticated with GitHub
+      if (user?.login && user.public_repos !== undefined) {
+        // User has GitHub data, set it as the profile
+        setGithubProfile({
+          login: user.login,
+          name: user.name || '',
+          avatar_url: user.avatar_url || user.image || '',
+          bio: user.bio || '',
+          public_repos: user.public_repos || 0,
+          followers: user.followers || 0,
+          following: user.following || 0,
+          company: user.company || '',
+          location: user.location || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error setting GitHub profile:', error)
     }
   }, [user])
 
@@ -103,13 +107,33 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return 'Date not available'
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch (error) {
+      console.error('Error formatting date:', error)
+      return 'Date not available'
+    }
+  }
+
+  // Ensure user object is valid to prevent runtime errors
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-600">Loading dashboard...</h2>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -119,7 +143,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-obsidian dark:text-pearl mb-2 flex items-center gap-2">
-            Welcome back, {githubProfile?.name?.split(' ')[0] || user.name?.split(' ')[0] || 'Developer'}!
+            Welcome back, {githubProfile?.name?.split(' ')[0] || user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Developer'}!
             <Hand className="w-8 h-8 text-prism-teal" />
           </h2>
           <p className="text-lg text-silver">
@@ -288,7 +312,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                               {repo.stargazers_count} stars
                             </span>
                             <span className="text-xs text-silver">
-                              Updated {new Date(repo.updated_at).toLocaleDateString()}
+                              Updated {formatDate(repo.updated_at).split(',')[0]}
                             </span>
                           </div>
                         </div>
@@ -391,7 +415,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   User ID
                 </label>
                 <div className="text-sm text-obsidian dark:text-pearl bg-gradient-to-r from-prism-teal/5 to-lavender-mist/5 p-3 rounded-lg border border-prism-teal/10 font-mono">
-                  {user.id}
+                  {user?.id || user?.email || 'Not available'}
                 </div>
               </div>
               <div className="space-y-2">
@@ -407,7 +431,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         </Card>
 
         {/* GitHub Connection for non-GitHub users */}
-        {!githubProfile && !user.login && (
+        {!githubProfile && !user?.login && (
           <Card className="mb-8" variant="ai-feature">
             <CardContent className="p-6">
               <div className="flex items-start space-x-4">
