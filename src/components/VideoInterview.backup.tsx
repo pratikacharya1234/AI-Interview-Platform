@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import html2canvas from 'html2canvas'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -28,7 +29,9 @@ import {
   PhoneOff,
   Settings,
   Monitor,
-  Camera
+  Camera,
+  Image,
+  Download
 } from 'lucide-react'
 
 interface VideoInterviewProps {
@@ -79,7 +82,6 @@ interface InterviewSession {
     platform: string
     language: string
   }
-  }
 }
 
 export default function VideoInterview({ onComplete }: VideoInterviewProps) {
@@ -95,6 +97,7 @@ export default function VideoInterview({ onComplete }: VideoInterviewProps) {
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
+  const [summaryImage, setSummaryImage] = useState<string | null>(null)
 
   const [state, setState] = useState<InterviewState>({
     isActive: false,
@@ -864,15 +867,12 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
 
     // Stop any existing recognition safely
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop()
-        recognitionRef.current = null
-      } catch (e) { /* ignore */ }
+      recognitionRef.current.stop()
+      recognitionRef.current = null
     }
 
-    try {
-      // Primary Method: Web Speech API (Most Accurate)
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    // Primary Method: Web Speech API (Most Accurate)
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
       if (SpeechRecognition && navigator.onLine) {
         console.log('🌐 Using Web Speech API for maximum accuracy')
@@ -936,10 +936,11 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
         }, 30000)
         // Start recording
         setState(prev => ({ ...prev, isListening: true }))
-        mediaRecorderRef.current.start()
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.start()
+        }
         console.log('🔴 Recording started (network-independent mode)')
         console.log('� Speak now! Recording will auto-stop after 30 seconds.')
-      }
       }
 
       if (mediaRecorderRef.current) {
@@ -972,19 +973,8 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
       console.log('🔴 Recording started (network-independent mode)')
       console.log('� Speak now! Recording will auto-stop after 30 seconds.')
 
-    } catch (error: any) {
-      console.error('🚨 Audio system failed:', error)
-      setState(prev => ({ ...prev, isListening: false, isProcessing: false }))
-
-      if (error.name === 'NotAllowedError') {
-        setError('🎤 Microphone access denied. Please enable microphone permissions and try again, or use text input below.')
-      } else if (error.name === 'NotFoundError') {
-        setError('🎤 No microphone found. Please connect a microphone or use text input below.')
-      } else {
-        setError('🔧 Audio system unavailable. Please use text input below to continue.')
-      }
-    }
-  }, [handleCandidateResponse])
+}
+}, [handleCandidateResponse])
 
   // Method 1: Web Speech API (Highest Accuracy)
   const startWebSpeechRecognition = useCallback(async (SpeechRecognition: any) => {
@@ -1488,7 +1478,9 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
       }
 
       fallbackRecorderRef.current = mediaRecorder
+      if (mediaRecorderRef.current) {
         mediaRecorderRef.current.start()
+      }
 
       setState(prev => ({ ...prev, isListening: true }))
 
@@ -1900,6 +1892,51 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
       setError(null)
 
       console.log('Interview state completely reset')
+
+      // Generate summary image
+      try {
+        const summaryDiv = document.createElement('div')
+        summaryDiv.style.position = 'absolute'
+        summaryDiv.style.left = '-9999px'
+        summaryDiv.style.top = '-9999px'
+        summaryDiv.style.width = '600px'
+        summaryDiv.style.padding = '20px'
+        summaryDiv.style.background = 'white'
+        summaryDiv.style.border = '2px solid #3b82f6'
+        summaryDiv.style.borderRadius = '10px'
+        summaryDiv.style.fontFamily = 'Arial, sans-serif'
+        summaryDiv.innerHTML = `
+          <h2 style="color: #1f2937; margin-bottom: 20px;">Interview Summary</h2>
+          <div style="margin-bottom: 15px;">
+            <strong>Duration:</strong> ${Math.floor(finalDuration / 60)}:${(finalDuration % 60).toString().padStart(2, '0')}
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Questions Answered:</strong> ${state.questionCount}/${interviewQuestions.length}
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Completion Rate:</strong> ${((state.questionCount / interviewQuestions.length) * 100).toFixed(1)}%
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Messages:</strong> ${state.messages.length}
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Video Enabled:</strong> ${state.isVideoEnabled ? 'Yes' : 'No'}
+          </div>
+          <div style="font-size: 12px; color: #6b7280;">
+            Completed on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+          </div>
+        `
+        document.body.appendChild(summaryDiv)
+
+        const canvas = await html2canvas(summaryDiv)
+        const imageDataUrl = canvas.toDataURL('image/png')
+        setSummaryImage(imageDataUrl)
+
+        document.body.removeChild(summaryDiv)
+        console.log('Summary image generated successfully')
+      } catch (imageError) {
+        console.warn('Failed to generate summary image:', imageError)
+      }
 
       // Call completion callback if interview was substantial
       if (state.messages.length >= 2 && saveSuccessful) {
@@ -2889,6 +2926,44 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Interview Summary Image */}
+      {summaryImage && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5" />
+              Interview Summary
+            </CardTitle>
+            <CardDescription>
+              A visual summary of your completed interview
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <img
+                src={summaryImage}
+                alt="Interview Summary"
+                className="max-w-full h-auto rounded-lg shadow-lg"
+              />
+            </div>
+            <div className="mt-4 text-center">
+              <Button
+                onClick={() => {
+                  const link = document.createElement('a')
+                  link.href = summaryImage
+                  link.download = `interview-summary-${Date.now()}.png`
+                  link.click()
+                }}
+                className="mr-2"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Image
+              </Button>
             </div>
           </CardContent>
         </Card>
