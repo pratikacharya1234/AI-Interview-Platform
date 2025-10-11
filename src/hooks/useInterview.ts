@@ -133,15 +133,17 @@ export function useInterview(options: UseInterviewOptions = {}) {
 
       options.onQuestionComplete?.(analysisResult)
 
-      // Move to next question or complete interview
-      if (state.currentQuestionIndex + 1 >= state.session.questions.length) {
+      // Always move to next question first
+      const nextIndex = state.currentQuestionIndex + 1
+      
+      setState(prev => ({
+        ...prev,
+        currentQuestionIndex: nextIndex
+      }))
+
+      // Complete interview only if we've answered all questions
+      if (nextIndex >= state.session.questions.length) {
         await completeInterview(updatedSession)
-      } else {
-        // Move to next question
-        setState(prev => ({
-          ...prev,
-          currentQuestionIndex: prev.currentQuestionIndex + 1
-        }))
       }
 
     } catch (error) {
@@ -163,7 +165,7 @@ export function useInterview(options: UseInterviewOptions = {}) {
     }))
   }, [state.session, state.currentQuestionIndex])
 
-  // Complete interview session
+  // Complete interview session with enhanced features
   const completeInterview = useCallback(async (sessionToComplete?: InterviewSession) => {
     const finalSession = sessionToComplete || state.session
     if (!finalSession) return
@@ -171,22 +173,57 @@ export function useInterview(options: UseInterviewOptions = {}) {
     setState(prev => ({ ...prev, isLoading: true }))
 
     try {
-      const response = await fetch('/api/interview/feedback', {
+      console.log('🎯 HACKATHON: Completing interview with enhanced features...')
+      
+      // 1. Generate feedback
+      const feedbackResponse = await fetch('/api/interview/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session: finalSession })
       })
 
-      const data = await response.json()
+      const feedbackData = await feedbackResponse.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate feedback')
+      if (!feedbackResponse.ok) {
+        throw new Error(feedbackData.error || 'Failed to generate feedback')
       }
 
+      // 2. Generate summary image using Runware
+      const avgScore = finalSession.responses.reduce((sum, r) => sum + r.score, 0) / finalSession.responses.length
+      const scoreLevel = avgScore >= 8 ? 'excellent' : avgScore >= 6 ? 'good' : avgScore >= 4 ? 'average' : 'needs improvement'
+      
+      const imagePrompt = `Professional interview summary visualization showing ${scoreLevel} performance for ${finalSession.position} position at ${finalSession.company}. Clean, modern infographic style with charts and success indicators. Corporate colors, professional layout.`
+      
+      let summaryImageUrl = null
+      try {
+        const imageResponse = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: imagePrompt })
+        })
+        
+        const imageData = await imageResponse.json()
+        if (imageData.success && imageData.imageUrl) {
+          summaryImageUrl = imageData.imageUrl
+          console.log('🎨 HACKATHON: Summary image generated!')
+        }
+      } catch (error) {
+        console.log('Image generation failed, continuing without image')
+      }
+
+      // 3. Create enhanced completed session
       const completedSession = {
         ...finalSession,
         endTime: new Date(),
-        feedback: data.feedback
+        feedback: feedbackData.feedback,
+        summaryImage: summaryImageUrl,
+        overallPerformance: {
+          averageScore: avgScore,
+          level: scoreLevel,
+          questionsAnswered: finalSession.responses.length,
+          totalQuestions: finalSession.questions.length,
+          completionRate: (finalSession.responses.length / finalSession.questions.length) * 100
+        }
       }
 
       setState(prev => ({

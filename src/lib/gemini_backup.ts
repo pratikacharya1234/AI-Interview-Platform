@@ -1,7 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const genAI = new GoogleGenera  /**
+   * Analyze interview response and provide feedback
+   */
+  async analyzeResponse(
+    question: InterviewQuestion,
+    userResponse: string,
+    context?: { position: string; company: string }
+  ): Promise<InterviewResponse> {.env.GEMINI_API_KEY!)
 
 // Interview question types
 export type QuestionType = 'technical' | 'behavioral' | 'system-design' | 'coding' | 'general'
@@ -52,7 +59,7 @@ class GeminiInterviewService {
   private model: any
 
   constructor() {
-    // Use gemini-1.5-flash as it's more widely available
+    // Try different model names - Gemini-1.5-flash is more widely available
     this.model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
   }
 
@@ -66,8 +73,6 @@ class GeminiInterviewService {
     difficulty: 'easy' | 'medium' | 'hard' = 'medium',
     count: number = 5
   ): Promise<InterviewQuestion[]> {
-    console.log('🤖 Attempting to generate questions with Gemini AI...')
-    
     const prompt = `
 Generate ${count} professional interview questions for a ${position} position at ${company}.
 
@@ -103,13 +108,12 @@ Focus on real-world scenarios and practical problem-solving skills.
       // Parse JSON response
       const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, ''))
       
-      console.log('✅ Questions generated successfully with Gemini AI!')
       return parsed.questions.map((q: any, index: number) => ({
         id: `q_${Date.now()}_${index}`,
         ...q
       }))
     } catch (error) {
-      console.error('⚠️ Gemini AI failed, using fallback questions:', error)
+      console.error('Error generating questions:', error)
       // Fallback questions
       return this.getFallbackQuestions(position, questionTypes[0], count)
     }
@@ -123,8 +127,12 @@ Focus on real-world scenarios and practical problem-solving skills.
     userResponse: string,
     context?: { position: string; company: string }
   ): Promise<InterviewResponse> {
-    console.log('🤖 Attempting to analyze response with Gemini AI...')
     
+    // For hackathon: If AI fails, use smart fallback analysis
+    const fallbackAnalysis = this.generateFallbackAnalysis(question, userResponse, context)
+    
+    // Try AI first, but fall back gracefully
+    try {
     const prompt = `
 You are an expert technical interviewer. Analyze this interview response:
 
@@ -163,7 +171,6 @@ Be constructive, specific, and encouraging in your feedback.
       
       const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, ''))
       
-      console.log('✅ Response analyzed successfully with Gemini AI!')
       return {
         questionId: question.id,
         question: question.question,
@@ -171,78 +178,41 @@ Be constructive, specific, and encouraging in your feedback.
         ...parsed
       }
     } catch (error) {
-      console.error('⚠️ Gemini AI analysis failed, using smart fallback:', error)
+      console.error('Error analyzing response:', error)
       
-      // Smart fallback analysis based on response characteristics
-      return this.generateFallbackAnalysis(question, userResponse, context)
-    }
-  }
-
-  /**
-   * Generate smart fallback analysis when AI is unavailable
-   */
-  private generateFallbackAnalysis(
-    question: InterviewQuestion, 
-    userResponse: string, 
-    context?: { position: string; company: string }
-  ): InterviewResponse {
-    const responseLength = userResponse.trim().length
-    const words = userResponse.trim().split(/\s+/).length
-    const hasExamples = /example|instance|case|experience|project|worked on|used to|previously/i.test(userResponse)
-    const hasTechnicalTerms = /algorithm|database|framework|API|system|architecture|performance|scalability/i.test(userResponse)
-    
-    let score = 5
-    let feedback = "Analysis based on response characteristics: "
-    let strengths = ["Response provided"]
-    let improvements = ["Consider providing more detail"]
-    
-    // Analyze based on length
-    if (responseLength < 30) {
-      score = 3
-      feedback += "Response is very brief. "
-      improvements = ["Provide more detailed explanations", "Include specific examples", "Elaborate on your approach"]
-    } else if (responseLength < 100) {
-      score = 5
-      feedback += "Response shows basic understanding. "
-      strengths = ["Addresses the question", "Demonstrates awareness"]
-      improvements = ["Add more technical detail", "Provide concrete examples"]
-    } else if (responseLength < 300) {
-      score = 7
-      feedback += "Good level of detail provided. "
-      strengths = ["Comprehensive response", "Shows good understanding"]
-      improvements = ["Continue with detailed responses"]
-    } else {
-      score = 8
-      feedback += "Excellent detailed response. "
-      strengths = ["Thorough explanation", "Demonstrates expertise", "Well-structured answer"]
-      improvements = ["Keep providing such detailed responses"]
-    }
-    
-    // Bonus points for examples and technical terms
-    if (hasExamples) {
-      score += 1
-      strengths.push("Provides concrete examples")
-    } else {
-      improvements.push("Include specific examples from your experience")
-    }
-    
-    if (hasTechnicalTerms && question.type === 'technical') {
-      score += 1
-      strengths.push("Uses appropriate technical terminology")
-    }
-    
-    // Cap score at 10
-    score = Math.min(score, 10)
-    
-    return {
-      questionId: question.id,
-      question: question.question,
-      userResponse,
-      score,
-      feedback: feedback + "This automated analysis will be enhanced once AI services are fully available.",
-      strengths,
-      improvements,
-      nextQuestionSuggestion: 'technical' as QuestionType
+      // Provide more helpful fallback analysis based on response length and content
+      const responseLength = userResponse.trim().length
+      let score = 5
+      let feedback = "AI analysis temporarily unavailable. Based on response characteristics: "
+      let strengths = ["Response provided"]
+      let improvements = ["AI analysis not available"]
+      
+      if (responseLength < 20) {
+        score = 3
+        feedback += "Response appears brief - consider providing more detailed explanations and examples."
+        improvements = ["Provide more detailed responses", "Include specific examples", "Explain your reasoning"]
+      } else if (responseLength < 100) {
+        score = 6
+        feedback += "Good response length - shows understanding of the question."
+        strengths = ["Appropriate response length", "Addresses the question"]
+        improvements = ["Consider adding more technical details", "Include real-world examples"]
+      } else {
+        score = 7
+        feedback += "Comprehensive response showing good understanding."
+        strengths = ["Detailed response", "Good communication", "Thorough explanation"]
+        improvements = ["Continue providing detailed responses", "Keep demonstrating expertise"]
+      }
+      
+      return {
+        questionId: question.id,
+        question: question.question,
+        userResponse,
+        score,
+        feedback,
+        strengths,
+        improvements,
+        nextQuestionSuggestion: 'technical' as QuestionType
+      }
     }
   }
 
@@ -250,8 +220,6 @@ Be constructive, specific, and encouraging in your feedback.
    * Generate overall interview feedback
    */
   async generateOverallFeedback(session: InterviewSession): Promise<string> {
-    console.log('🤖 Attempting to generate overall feedback with Gemini AI...')
-    
     const prompt = `
 Generate comprehensive interview feedback for a candidate:
 
@@ -279,57 +247,11 @@ Make the feedback constructive, professional, and actionable.
     try {
       const result = await this.model.generateContent(prompt)
       const response = await result.response
-      console.log('✅ Overall feedback generated successfully with Gemini AI!')
       return response.text()
     } catch (error) {
-      console.error('⚠️ Gemini AI feedback generation failed, using fallback:', error)
-      return this.generateFallbackFeedback(session)
+      console.error('Error generating overall feedback:', error)
+      return "Interview completed. Please review individual question feedback for detailed insights."
     }
-  }
-
-  /**
-   * Generate fallback feedback when AI is unavailable
-   */
-  private generateFallbackFeedback(session: InterviewSession): string {
-    const avgScore = session.overallScore
-    let performance = ""
-    
-    if (avgScore >= 8) {
-      performance = "Excellent"
-    } else if (avgScore >= 6) {
-      performance = "Good"
-    } else if (avgScore >= 4) {
-      performance = "Satisfactory"
-    } else {
-      performance = "Needs Improvement"
-    }
-    
-    return `
-Interview Feedback Summary
-
-Overall Performance: ${performance} (${avgScore.toFixed(1)}/10)
-
-Thank you for completing the interview for the ${session.position} position at ${session.company}. 
-
-Performance Summary:
-- Questions Answered: ${session.responses.length}
-- Average Score: ${avgScore.toFixed(1)}/10
-- Completion Rate: 100%
-
-Key Observations:
-${session.responses.map((r, i) => `
-• Question ${i + 1}: Score ${r.score}/10
-  Strengths: ${r.strengths.join(', ')}
-  ${r.improvements.length > 0 ? `Areas to improve: ${r.improvements.join(', ')}` : ''}
-`).join('\n')}
-
-Recommendations:
-- Continue practicing technical communication
-- Prepare specific examples from your experience
-- Focus on providing detailed, structured responses
-
-This automated feedback will be enhanced with AI-powered insights once services are fully available.
-`
   }
 
   /**
@@ -363,7 +285,7 @@ This automated feedback will be enhanced with AI-powered insights once services 
   }
 
   /**
-   * Fallback questions when API fails - Expanded to ensure 3+ questions per type
+   * Fallback questions when API fails
    */
   private getFallbackQuestions(position: string, type: QuestionType, count: number): InterviewQuestion[] {
     const fallbacks: Record<QuestionType, InterviewQuestion[]> = {
@@ -394,24 +316,6 @@ This automated feedback will be enhanced with AI-powered insights once services 
           difficulty: 'medium',
           category: 'Project Experience',
           expectedDuration: 5
-        },
-        {
-          id: 'fallback_tech_4',
-          type: 'technical',
-          question: 'How do you ensure code quality and maintainability in your projects?',
-          followUp: ['What testing strategies do you use?', 'How do you handle code reviews?'],
-          difficulty: 'medium',
-          category: 'Code Quality',
-          expectedDuration: 5
-        },
-        {
-          id: 'fallback_tech_5',
-          type: 'technical',
-          question: 'Describe your experience with version control and collaborative development.',
-          followUp: ['How do you handle merge conflicts?', 'What branching strategies do you prefer?'],
-          difficulty: 'medium',
-          category: 'Development Process',
-          expectedDuration: 5
         }
       ],
       behavioral: [
@@ -440,15 +344,6 @@ This automated feedback will be enhanced with AI-powered insights once services 
           followUp: ['What resources did you use?', 'How do you typically approach learning?'],
           difficulty: 'medium',
           category: 'Learning & Adaptability',
-          expectedDuration: 5
-        },
-        {
-          id: 'fallback_beh_4',
-          type: 'behavioral',
-          question: 'Describe a situation where you had to meet a tight deadline. How did you manage it?',
-          followUp: ['How did you prioritize tasks?', 'What would you do differently?'],
-          difficulty: 'medium',
-          category: 'Time Management',
           expectedDuration: 5
         }
       ],

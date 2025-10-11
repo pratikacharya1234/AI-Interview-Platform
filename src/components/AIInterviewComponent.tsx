@@ -41,7 +41,7 @@ function InterviewStartForm({ onStart, isLoading }: InterviewStartFormProps) {
     position: '',
     company: '',
     difficulty: 'medium' as 'easy' | 'medium' | 'hard',
-    questionCount: 5
+    questionCount: 3
   })
   
   const [selectedTypes, setSelectedTypes] = useState<QuestionType[]>(['technical', 'behavioral'])
@@ -440,50 +440,137 @@ export default function AIInterviewComponent() {
     )
   }
 
-  // Interview completed
+  // Interview completed with enhanced features
   if (interview.session && !interview.isSessionActive) {
     return (
-      <Card className="max-w-4xl mx-auto p-8 text-center">
-        <CheckCircle className="w-16 h-16 text-prism-teal mx-auto mb-6" />
-        <h2 className="text-2xl font-bold text-obsidian dark:text-pearl mb-4">
-          Interview Completed!
-        </h2>
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <div className="p-4 bg-prism-teal/10 rounded-lg">
-            <div className="text-2xl font-bold text-prism-teal">
-              {interview.session.overallScore.toFixed(1)}/10
+      <div className="max-w-6xl mx-auto p-8 space-y-8">
+        {/* Header */}
+        <Card className="p-8 text-center">
+          <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-6" />
+          <h2 className="text-3xl font-bold mb-4">🎉 Interview Completed!</h2>
+          <p className="text-gray-600 mb-6">Here's your comprehensive interview summary</p>
+        </Card>
+
+        {/* Performance Metrics */}
+        <Card className="p-6">
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            Performance Overview
+          </h3>
+          <div className="grid md:grid-cols-4 gap-6">
+            <div className="p-4 bg-blue-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {interview.session.overallScore?.toFixed(1) || 'N/A'}/10
+              </div>
+              <div className="text-sm text-gray-600">Overall Score</div>
             </div>
-            <div className="text-sm text-silver">Overall Score</div>
-          </div>
-          <div className="p-4 bg-lavender-mist/10 rounded-lg">
-            <div className="text-2xl font-bold text-lavender-mist">
-              {interview.session.responses.length}
+            <div className="p-4 bg-green-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {interview.session.responses.length}
+              </div>
+              <div className="text-sm text-gray-600">Questions Answered</div>
             </div>
-            <div className="text-sm text-silver">Questions Answered</div>
-          </div>
-          <div className="p-4 bg-jade-success/10 rounded-lg">
-            <div className="text-2xl font-bold text-jade-success">
-              {Math.round(((interview.session.endTime?.getTime() || Date.now()) - interview.session.startTime.getTime()) / 60000)}m
+            <div className="p-4 bg-purple-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {Math.round(((interview.session.endTime?.getTime() || Date.now()) - interview.session.startTime.getTime()) / 60000)}m
+              </div>
+              <div className="text-sm text-gray-600">Total Time</div>
             </div>
-            <div className="text-sm text-silver">Total Time</div>
+            <div className="p-4 bg-orange-50 rounded-lg text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {interview.session.overallPerformance?.level || 'N/A'}
+              </div>
+              <div className="text-sm text-gray-600">Performance Level</div>
+            </div>
           </div>
-        </div>
-        
-        {interview.session.feedback && (
-          <div className="text-left bg-silver/5 p-6 rounded-lg mb-6">
-            <h3 className="font-semibold text-obsidian dark:text-pearl mb-3">
-              Detailed Feedback
+        </Card>
+
+        {/* Summary Image */}
+        {interview.session.summaryImage && (
+          <Card className="p-6">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              🎨 Interview Summary Visualization
             </h3>
-            <div className="text-silver whitespace-pre-wrap">
-              {interview.session.feedback}
+            <div className="text-center">
+              <img 
+                src={interview.session.summaryImage} 
+                alt="Interview Summary" 
+                className="max-w-md mx-auto rounded-lg shadow-lg"
+              />
+              <p className="text-sm text-gray-600 mt-2">Generated with Runware AI</p>
             </div>
-          </div>
+          </Card>
         )}
 
-        <Button onClick={interview.resetInterview} size="lg">
-          Start New Interview
-        </Button>
-      </Card>
+        {/* Interview History */}
+        <Card className="p-6">
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <History className="w-5 h-5" />
+            Interview History
+          </h3>
+          <div className="space-y-4">
+            {interview.session.responses.map((response, index) => (
+              <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-600">Question {index + 1}</span>
+                  </div>
+                  <p className="text-gray-800 italic">"{response.question}"</p>
+                </div>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="w-4 h-4 text-green-600" />
+                    <span className="font-medium text-green-600">Your Answer</span>
+                    <Badge variant={response.score >= 7 ? 'success' : response.score >= 5 ? 'secondary' : 'destructive'}>
+                      {response.score}/10
+                    </Badge>
+                  </div>
+                  <p className="text-gray-700">{response.userResponse}</p>
+                </div>
+                {response.feedback && (
+                  <div className="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lightbulb className="w-4 h-4 text-blue-600" />
+                      <span className="font-medium text-blue-600">AI Feedback</span>
+                    </div>
+                    <p className="text-sm text-blue-800">{response.feedback}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Overall Feedback */}
+        {interview.session.feedback && (
+          <Card className="p-6">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Award className="w-5 h-5" />
+              Overall Feedback & Recommendations
+            </h3>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="text-gray-700 whitespace-pre-wrap">
+                {interview.session.feedback}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Action Buttons */}
+        <div className="text-center">
+          <Button onClick={interview.resetInterview} size="lg" className="mr-4">
+            Start New Interview
+          </Button>
+          <Button 
+            variant="outline" 
+            size="lg"
+            onClick={() => window.print()}
+          >
+            Download Report
+          </Button>
+        </div>
+      </div>
     )
   }
 

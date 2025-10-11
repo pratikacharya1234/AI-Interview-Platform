@@ -119,6 +119,11 @@ export default function VideoInterview({ onComplete }: VideoInterviewProps) {
   const networkErrorCountRef = useRef<number>(0)
   const fallbackRecorderRef = useRef<MediaRecorder | null>(null)
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline' | 'checking'>('checking')
+  
+  // HACKATHON: Image generation state
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+  const [imagePrompt, setImagePrompt] = useState('')
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
 
   // Network connectivity checker
   useEffect(() => {
@@ -1851,6 +1856,32 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
     }
   }, [completeInterview, state.messages])
 
+  // HACKATHON: Quick image generation
+  const generateImage = useCallback(async () => {
+    if (!imagePrompt.trim()) return
+    
+    setIsGeneratingImage(true)
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: imagePrompt })
+      })
+      
+      const data = await response.json()
+      if (data.success && data.imageUrl) {
+        setGeneratedImage(data.imageUrl)
+        console.log('🎨 HACKATHON: Image generated!')
+      } else {
+        console.error('Image generation failed:', data)
+      }
+    } catch (error) {
+      console.error('🚨 HACKATHON: Image generation error:', error)
+    } finally {
+      setIsGeneratingImage(false)
+    }
+  }, [imagePrompt])
+
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -2209,6 +2240,44 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
                 </CardContent>
               </Card>
             </div>
+            
+            {/* HACKATHON: Image Generation Feature */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="text-lg">🎨 HACKATHON: AI Image Generator</CardTitle>
+                <CardDescription>Generate images using Runware AI during your interview break</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter image prompt (e.g., 'a futuristic office space')"
+                    value={imagePrompt}
+                    onChange={(e) => setImagePrompt(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => e.key === 'Enter' && !isGeneratingImage && generateImage()}
+                  />
+                  <Button 
+                    onClick={generateImage} 
+                    disabled={isGeneratingImage || !imagePrompt.trim()}
+                    variant="primary"
+                  >
+                    {isGeneratingImage ? 'Generating...' : 'Generate'}
+                  </Button>
+                </div>
+                
+                {generatedImage && (
+                  <div className="mt-4">
+                    <img 
+                      src={generatedImage} 
+                      alt="Generated image" 
+                      className="w-full max-w-md mx-auto rounded-lg shadow-lg"
+                    />
+                    <p className="text-sm text-gray-600 mt-2 text-center">Generated with Runware AI</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
       </div>
