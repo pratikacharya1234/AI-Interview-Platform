@@ -5,31 +5,31 @@ The Video Interview feature provides a face-to-face interview experience with an
 
 ## Features
 
-### 🎥 Camera Support
+### Camera Support
 - **Live Video Feed**: Real-time camera preview during interview
 - **Toggle Camera**: Turn video on/off during interview
 - **Professional Interface**: Clean, modern video layout
 - **Responsive Design**: Works on desktop and mobile devices
 
-### 🎙️ Audio Controls
+### Audio Controls
 - **Mute/Unmute**: Control microphone during interview
 - **Speech Recognition**: Automatic transcription of candidate responses
 - **Text-to-Speech**: AI interviewer speaks questions naturally
 - **Audio Quality**: High-quality audio processing
 
-### ⏺️ Recording & Data Management
+### Recording & Data Management
 - **Session Recording**: Full interview recording (video + audio)
 - **Real-time Transcription**: Live conversion of speech to text
 - **Database Integration**: All data saved to backend database
 - **Session Persistence**: Resume interrupted interviews
 
-### 🤖 AI Interview Features
+### AI Interview Features
 - **Natural Questions**: 6 comprehensive interview questions
 - **Real-time Feedback**: Instant AI analysis of responses
 - **Performance Metrics**: Confidence score, response analysis
 - **Progress Tracking**: Visual progress bar and question counter
 
-### 📊 Analytics & Feedback
+### Analytics & Feedback
 - **Comprehensive Metrics**: Response length, timing, word count
 - **Confidence Scoring**: AI-powered confidence assessment
 - **Improvement Recommendations**: Personalized feedback
@@ -104,10 +104,10 @@ Get all interviews for current user
 ## Browser Compatibility
 
 ### Required Features
-- ✅ WebRTC (Camera/Microphone)
-- ✅ MediaRecorder API
-- ✅ Speech Recognition API
-- ✅ Speech Synthesis API
+- WebRTC (Camera/Microphone)
+- MediaRecorder API
+- Speech Recognition API
+- Speech Synthesis API
 
 ### Supported Browsers
 - Chrome 88+
@@ -123,16 +123,16 @@ Get all interviews for current user
 ## Security & Privacy
 
 ### Data Protection
-- 🔒 User authentication required
-- 🔒 Session-based access control
-- 🔒 Encrypted data transmission
-- 🔒 Secure recording storage
+- User authentication required
+- Session-based access control
+- Encrypted data transmission
+- Secure recording storage
 
 ### Privacy Features
-- 📹 Camera control (on/off toggle)
-- 🎙️ Microphone control (mute/unmute)
-- 🗑️ Recording deletion options
-- 👤 User-owned data only
+- Camera control (on/off toggle)
+- Microphone control (mute/unmute)
+- Recording deletion options
+- User-owned data only
 
 ## Performance Metrics
 
@@ -183,20 +183,20 @@ const { interview } = await response.json()
 ## Future Enhancements
 
 ### Planned Features
-- 📱 Mobile app support
-- 🌍 Multi-language interviews
-- 🎨 Custom interview themes
-- 📈 Advanced analytics dashboard
-- 🤝 Group interview support
-- 🎯 Role-specific question banks
+- Mobile app support
+- Multi-language interviews
+- Custom interview themes
+- Advanced analytics dashboard
+- Group interview support
+- Role-specific question banks
 
 ### Technical Improvements
-- 📊 Real-time sentiment analysis
-- 🎭 Facial expression analysis
-- 🗣️ Voice tone analysis
-- 📝 Automated interview summaries
-- 🔗 Calendar integration
-- ☁️ Cloud recording storage
+- Real-time sentiment analysis
+- Facial expression analysis
+- Voice tone analysis
+- Automated interview summaries
+- Calendar integration
+- Cloud recording storage
 
 ## Troubleshooting
 
