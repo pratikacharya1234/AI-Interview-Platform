@@ -2347,7 +2347,7 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
             <span className="text-sm font-medium">Response Options</span>
           </div>
           <p className="text-sm text-blue-700 mt-1">
-            You can respond by voice (use "Start Listening" button) or by typing your answer directly in the text box below each question.
+            You can respond by voice (use &quot;Start Listening&quot; button) or by typing your answer directly in the text box below each question.
           </p>
         </div>
       )}

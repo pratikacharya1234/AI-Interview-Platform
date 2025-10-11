@@ -1,14 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Initialize Gemini AI
-const genAI = new GoogleGenera  /**
-   * Analyze interview response and provide feedback
-   */
-  async analyzeResponse(
-    question: InterviewQuestion,
-    userResponse: string,
-    context?: { position: string; company: string }
-  ): Promise<InterviewResponse> {.env.GEMINI_API_KEY!)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 // Interview question types
 export type QuestionType = 'technical' | 'behavioral' | 'system-design' | 'coding' | 'general'

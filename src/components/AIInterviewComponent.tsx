@@ -448,7 +448,7 @@ export default function AIInterviewComponent() {
         <Card className="p-8 text-center">
           <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-6" />
           <h2 className="text-3xl font-bold mb-4">🎉 Interview Completed!</h2>
-          <p className="text-gray-600 mb-6">Here's your comprehensive interview summary</p>
+          <p className="text-gray-600 mb-6">Here&apos;s your comprehensive interview summary</p>
         </Card>
 
         {/* Performance Metrics */}
@@ -516,7 +516,7 @@ export default function AIInterviewComponent() {
                     <Bot className="w-4 h-4 text-blue-600" />
                     <span className="font-medium text-blue-600">Question {index + 1}</span>
                   </div>
-                  <p className="text-gray-800 italic">"{response.question}"</p>
+                  <p className="text-gray-800 italic">&quot;{response.question}&quot;</p>
                 </div>
                 <div className="mb-3">
                   <div className="flex items-center gap-2 mb-2">

@@ -2385,7 +2385,7 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
             <span className="text-sm font-medium">Response Options</span>
           </div>
           <p className="text-sm text-blue-700 mt-1">
-            You can respond by voice (use "Start Listening" button) or by typing your answer directly in the text box below each question.
+            You can respond by voice (use &quot;Start Listening&quot; button) or by typing your answer directly in the text box below each question.
           </p>
         </div>
       )}
@@ -2834,7 +2834,7 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
                     <div className="bg-white/70 rounded-lg p-4 backdrop-blur-sm">
                       <p className="text-sm text-blue-700 font-medium mb-2">🎤 Voice Instructions:</p>
                       <ul className="text-sm text-blue-600 space-y-1">
-                        <li>• Click "Record Your Answer" button</li>
+                        <li>• Click &quot;Record Your Answer&quot; button</li>
                         <li>• Speak clearly for up to 18 seconds</li>
                         <li>• AI will automatically process your response</li>
                         <li>• No typing required - pure voice interaction</li>
