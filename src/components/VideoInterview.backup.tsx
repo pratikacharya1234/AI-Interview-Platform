@@ -29,9 +29,7 @@ import {
   PhoneOff,
   Settings,
   Monitor,
-  Camera,
-  Image,
-  Download
+  Camera
 } from 'lucide-react'
 
 interface VideoInterviewProps {
@@ -82,6 +80,7 @@ interface InterviewSession {
     platform: string
     language: string
   }
+  summaryImage?: string
 }
 
 export default function VideoInterview({ onComplete }: VideoInterviewProps) {
@@ -97,7 +96,6 @@ export default function VideoInterview({ onComplete }: VideoInterviewProps) {
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
-  const [summaryImage, setSummaryImage] = useState<string | null>(null)
 
   const [state, setState] = useState<InterviewState>({
     isActive: false,
@@ -1733,6 +1731,7 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
   // Complete the interview with production validation
   const completeInterview = useCallback(async () => {
     try {
+      let summaryImage: string | null = null
       setState(prev => ({ ...prev, isProcessing: true }))
 
       // Validate minimum interview requirements
@@ -1773,6 +1772,51 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
       const endTime = new Date()
       const finalDuration = Math.floor((endTime.getTime() - (state.startTime?.getTime() || Date.now())) / 1000)
 
+      // Generate summary image
+      try {
+        const summaryDiv = document.createElement('div')
+        summaryDiv.style.position = 'absolute'
+        summaryDiv.style.left = '-9999px'
+        summaryDiv.style.top = '-9999px'
+        summaryDiv.style.width = '600px'
+        summaryDiv.style.padding = '20px'
+        summaryDiv.style.background = 'white'
+        summaryDiv.style.border = '2px solid #3b82f6'
+        summaryDiv.style.borderRadius = '10px'
+        summaryDiv.style.fontFamily = 'Arial, sans-serif'
+        summaryDiv.innerHTML = `
+          <h2 style="color: #1f2937; margin-bottom: 20px;">Interview Summary</h2>
+          <div style="margin-bottom: 15px;">
+            <strong>Duration:</strong> ${Math.floor(finalDuration / 60)}:${(finalDuration % 60).toString().padStart(2, '0')}
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Questions Answered:</strong> ${state.questionCount}/${interviewQuestions.length}
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Completion Rate:</strong> ${((state.questionCount / interviewQuestions.length) * 100).toFixed(1)}%
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Messages:</strong> ${state.messages.length}
+          </div>
+          <div style="margin-bottom: 15px;">
+            <strong>Video Enabled:</strong> ${state.isVideoEnabled ? 'Yes' : 'No'}
+          </div>
+          <div style="font-size: 12px; color: #6b7280;">
+            Completed on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+          </div>
+        `
+        document.body.appendChild(summaryDiv)
+
+        const canvas = await html2canvas(summaryDiv)
+        const imageDataUrl = canvas.toDataURL('image/png')
+        summaryImage = imageDataUrl
+
+        document.body.removeChild(summaryDiv)
+        console.log('Summary image generated successfully')
+      } catch (imageError) {
+        console.warn('Failed to generate summary image:', imageError)
+      }
+
       // Prepare comprehensive interview data
       const interviewData: InterviewSession = {
         id: state.interviewId || `interview-${Date.now()}`,
@@ -1790,7 +1834,8 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
           userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : '',
           platform: typeof window !== 'undefined' ? window.navigator.platform : '',
           language: typeof window !== 'undefined' ? window.navigator.language : ''
-        }
+        },
+        summaryImage: summaryImage || undefined
       }
 
       // Save to backend with retry logic
@@ -1892,51 +1937,6 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
       setError(null)
 
       console.log('Interview state completely reset')
-
-      // Generate summary image
-      try {
-        const summaryDiv = document.createElement('div')
-        summaryDiv.style.position = 'absolute'
-        summaryDiv.style.left = '-9999px'
-        summaryDiv.style.top = '-9999px'
-        summaryDiv.style.width = '600px'
-        summaryDiv.style.padding = '20px'
-        summaryDiv.style.background = 'white'
-        summaryDiv.style.border = '2px solid #3b82f6'
-        summaryDiv.style.borderRadius = '10px'
-        summaryDiv.style.fontFamily = 'Arial, sans-serif'
-        summaryDiv.innerHTML = `
-          <h2 style="color: #1f2937; margin-bottom: 20px;">Interview Summary</h2>
-          <div style="margin-bottom: 15px;">
-            <strong>Duration:</strong> ${Math.floor(finalDuration / 60)}:${(finalDuration % 60).toString().padStart(2, '0')}
-          </div>
-          <div style="margin-bottom: 15px;">
-            <strong>Questions Answered:</strong> ${state.questionCount}/${interviewQuestions.length}
-          </div>
-          <div style="margin-bottom: 15px;">
-            <strong>Completion Rate:</strong> ${((state.questionCount / interviewQuestions.length) * 100).toFixed(1)}%
-          </div>
-          <div style="margin-bottom: 15px;">
-            <strong>Messages:</strong> ${state.messages.length}
-          </div>
-          <div style="margin-bottom: 15px;">
-            <strong>Video Enabled:</strong> ${state.isVideoEnabled ? 'Yes' : 'No'}
-          </div>
-          <div style="font-size: 12px; color: #6b7280;">
-            Completed on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
-          </div>
-        `
-        document.body.appendChild(summaryDiv)
-
-        const canvas = await html2canvas(summaryDiv)
-        const imageDataUrl = canvas.toDataURL('image/png')
-        setSummaryImage(imageDataUrl)
-
-        document.body.removeChild(summaryDiv)
-        console.log('Summary image generated successfully')
-      } catch (imageError) {
-        console.warn('Failed to generate summary image:', imageError)
-      }
 
       // Call completion callback if interview was substantial
       if (state.messages.length >= 2 && saveSuccessful) {
@@ -2926,44 +2926,6 @@ Response should be 1-2 sentences acknowledging + 1-2 sentences with new question
                   </div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Interview Summary Image */}
-      {summaryImage && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Image className="w-5 h-5" />
-              Interview Summary
-            </CardTitle>
-            <CardDescription>
-              A visual summary of your completed interview
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-center">
-              <img
-                src={summaryImage}
-                alt="Interview Summary"
-                className="max-w-full h-auto rounded-lg shadow-lg"
-              />
-            </div>
-            <div className="mt-4 text-center">
-              <Button
-                onClick={() => {
-                  const link = document.createElement('a')
-                  link.href = summaryImage
-                  link.download = `interview-summary-${Date.now()}.png`
-                  link.click()
-                }}
-                className="mr-2"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download Image
-              </Button>
             </div>
           </CardContent>
         </Card>
