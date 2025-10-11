@@ -346,144 +346,41 @@ export default function VideoInterview({ onComplete }: VideoInterviewProps) {
         }
       }
 
-      // ADVANCED: Progressive quality fallback system for maximum compatibility
-      const constraintOptions = [
-        // Ultra High Quality (1080p)
-        {
-          video: {
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-            frameRate: { ideal: 30, min: 24 },
-            facingMode: 'user',
-            aspectRatio: { ideal: 16/9 }
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: { ideal: 44100 },
-            channelCount: { ideal: 1 }
-          }
-        },
-        // High Quality (720p) - Primary fallback
-        {
-          video: {
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 },
-            frameRate: { ideal: 30, min: 15 },
-            facingMode: 'user',
-            aspectRatio: { ideal: 16/9 }
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 44100,
-            channelCount: 1
-          }
-        },
-        // Basic Quality (480p) - Last resort
-        {
-          video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            frameRate: { ideal: 15 },
-            facingMode: 'user'
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true
-          }
-        }
-      ]
+      // HACKATHON: Simple and fast - get video working NOW!
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       
-      let stream: MediaStream | null = null
-      let qualityLevel = 0
+      console.log('✅ HACKATHON: Got media stream!')
       
-      // Try each quality level until success
-      for (let i = 0; i < constraintOptions.length; i++) {
-        try {
-          console.log(`🎯 Trying quality level ${i + 1}: ${i === 0 ? '1080p' : i === 1 ? '720p' : '480p'}`)
-          stream = await navigator.mediaDevices.getUserMedia(constraintOptions[i])
-          qualityLevel = i + 1
-          console.log(`✅ Success with quality level ${qualityLevel}`)
-          break
-        } catch (err) {
-          console.warn(`⚠️ Quality level ${i + 1} failed, trying next...`)
-          if (i === constraintOptions.length - 1) throw err
-        }
-      }
-      
-      if (!stream) {
-        throw new Error('Failed to access camera and microphone with any quality level')
-      }
-
-      console.log('🎉 Successfully obtained media stream with progressive quality fallback')
-      
-      // Enhanced stream validation
-      const videoTracks = stream.getVideoTracks()
-      const audioTracks = stream.getAudioTracks()
-
-      if (videoTracks.length === 0) {
-        stream.getTracks().forEach(track => track.stop())
-        throw new Error('Camera access denied. Please enable camera permissions in your browser settings.')
-      }
-
-      if (audioTracks.length === 0) {
-        stream.getTracks().forEach(track => track.stop())
-        throw new Error('Microphone access denied. Please enable microphone permissions in your browser settings.')
-      }
-
-      // Store stream reference
+      // Store stream
       mediaStreamRef.current = stream
       
-      // BULLETPROOF video setup with comprehensive error handling
+      // Setup video element - SIMPLE!
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        videoRef.current.muted = true // Prevent feedback
         
-        // Enhanced video loading with timeout and error recovery
-        await Promise.race([
-          new Promise((resolve) => {
-            videoRef.current!.onloadedmetadata = () => {
-              console.log('📹 Video metadata loaded successfully')
-              resolve(true)
-            }
-            videoRef.current!.onerror = (err) => {
-              console.error('Video element error:', err)
-              resolve(false)
-            }
-          }),
-          new Promise((resolve) => 
-            setTimeout(() => {
-              console.warn('Video loading timeout, continuing anyway...')
-              resolve(false)
-            }, 3000)
-          )
-        ])
-        
-        // Auto-play with error handling
-        try {
-          await videoRef.current.play()
-          console.log('🎬 Video preview started successfully')
-        } catch (playError) {
-          console.log('Video will play after user interaction')
-        }
+        // Try to play immediately
+        setTimeout(async () => {
+          try {
+            await videoRef.current!.play()
+            console.log('🎬 HACKATHON: Video playing!')
+          } catch (e) {
+            console.log('Video will play on user click')
+          }
+        }, 100)
       }
       
-      // Log successful initialization
-      console.log('Media initialized successfully:', {
-        videoTracks: videoTracks.length,
-        audioTracks: audioTracks.length,
-        videoSettings: videoTracks[0]?.getSettings(),
-        audioSettings: audioTracks[0]?.getSettings()
-      })
+      // HACKATHON: Quick success setup
+      console.log('🚀 HACKATHON: Media initialized successfully!')
       
       setPermissionsGranted(true)
       setError(null)
       
-      // Enable tracks by default for interview
-      videoTracks[0].enabled = true  // Camera always on for video interview
-      audioTracks[0].enabled = !state.isMuted
+      // Enable tracks
+      const videoTracks = stream.getVideoTracks()
+      const audioTracks = stream.getAudioTracks()
+      if (videoTracks[0]) videoTracks[0].enabled = true
+      if (audioTracks[0]) audioTracks[0].enabled = !state.isMuted
       
     } catch (err: any) {
       console.error('Media initialization error:', err)
