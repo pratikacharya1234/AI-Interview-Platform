@@ -1,68 +1,93 @@
+'use client'
+
 import React from 'react'
+import { Slot } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { MotionDiv } from './motion-wrapper'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
-  size?: 'default' | 'sm' | 'lg' | 'icon'
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   isLoading?: boolean
+  icon?: React.ReactNode
+  fullWidth?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'default', size = 'default', isLoading = false, children, ...props }, ref) => {
-    const baseClasses = 'inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
+  ({ 
+    className, 
+    variant = 'primary', 
+    size = 'md', 
+    isLoading = false, 
+    icon,
+    fullWidth = false,
+    children, 
+    ...props 
+  }, ref) => {
+    const baseClasses = cn(
+      'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 rounded-lg',
+      fullWidth && 'w-full'
+    )
     
     const variants = {
-      default: 'bg-blue-600 text-white hover:bg-blue-700',
-      destructive: 'bg-red-600 text-white hover:bg-red-700',
-      outline: 'border border-gray-300 bg-background hover:bg-gray-50',
-      secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-      ghost: 'hover:bg-gray-100',
-      link: 'text-blue-600 underline-offset-4 hover:underline',
+      primary: 'bg-prism-teal hover:bg-teal-600 text-white shadow-md hover:shadow-teal-glow hover:scale-[1.02] active:scale-95 focus:ring-prism-teal',
+      secondary: 'bg-lavender-mist hover:bg-purple-500 text-white shadow-md hover:shadow-lavender-glow hover:scale-[1.02] active:scale-95 focus:ring-lavender-mist',
+      outline: 'border-2 border-prism-teal text-prism-teal hover:bg-prism-teal hover:text-white focus:ring-prism-teal',
+      ghost: 'text-graphite dark:text-silver hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-300',
+      danger: 'bg-rose-alert hover:bg-red-600 text-white shadow-md hover:scale-[1.02] active:scale-95 focus:ring-rose-alert',
+      success: 'bg-jade-success hover:bg-green-600 text-white shadow-md hover:scale-[1.02] active:scale-95 focus:ring-jade-success',
     }
 
     const sizes = {
-      default: 'h-10 px-4 py-2',
-      sm: 'h-9 rounded-md px-3',
-      lg: 'h-11 rounded-md px-8',
-      icon: 'h-10 w-10',
+      sm: 'px-3 py-2 text-sm',
+      md: 'px-6 py-3 text-sm',
+      lg: 'px-8 py-4 text-base',
+      xl: 'px-10 py-5 text-lg',
     }
 
     return (
-      <button
-        className={cn(
-          baseClasses,
-          variants[variant],
-          sizes[size],
-          className
-        )}
-        ref={ref}
-        disabled={isLoading || props.disabled}
-        {...props}
+      <MotionDiv
+        className="inline-flex"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 25
+        }}
       >
-        {isLoading && (
-          <svg
-            className="mr-2 h-4 w-4 animate-spin"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-        )}
-        {children}
-      </button>
+        <button
+          className={cn(
+            baseClasses,
+            variants[variant],
+            sizes[size],
+            className
+          )}
+          ref={ref}
+          disabled={isLoading || props.disabled}
+          {...props}
+        >
+          {isLoading && (
+            <MotionDiv
+              className="mr-2"
+              animate={{ rotate: 360 }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+            >
+              <Loader2 className="h-4 w-4" />
+            </MotionDiv>
+          )}
+          {icon && !isLoading && (
+            <span className="mr-2">{icon}</span>
+          )}
+          {children}
+        </button>
+      </MotionDiv>
     )
   }
 )

@@ -3,9 +3,28 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { signOut } from '@/lib/auth'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge, SkillBadge, InterviewStatusBadge, AIPrismBadge } from '@/components/ui/badge'
+import { UserAvatar } from '@/components/ui/avatar'
+import { Progress, InterviewProgress } from '@/components/ui/progress'
+import { InterviewAlert } from '@/components/ui/alert'
 import { getGitHubProfile, getGitHubRepos } from '@/lib/github'
-import type { User } from '@supabase/supabase-js'
+import { Hand, Building, MapPin, BarChart3, Target, BookOpen, Sparkles } from 'lucide-react'
+interface AuthUser {
+  id?: string
+  name?: string | null
+  email?: string | null
+  image?: string | null
+  login?: string
+  avatar_url?: string
+  bio?: string
+  company?: string
+  location?: string
+  public_repos?: number
+  followers?: number
+  following?: number
+  githubId?: string
+}
 
 interface GitHubProfile {
   login: string
@@ -30,20 +49,31 @@ interface GitHubRepo {
 }
 
 interface DashboardClientProps {
-  user: User
+  user: AuthUser
 }
 
 export default function DashboardClient({ user }: DashboardClientProps) {
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [githubProfile, setGithubProfile] = useState<GitHubProfile | null>(null)
   const [githubRepos, setGithubRepos] = useState<GitHubRepo[]>([])
   const [loadingGithub, setLoadingGithub] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    // Load GitHub profile if user signed in with GitHub
-    if (user.app_metadata?.provider === 'github' && user.user_metadata?.provider_token) {
-      loadGitHubData(user.user_metadata.provider_token)
+    // GitHub profile will be loaded automatically through NextAuth callback
+    // The user object already contains GitHub data if authenticated with GitHub
+    if (user.login && user.public_repos !== undefined) {
+      // User has GitHub data, set it as the profile
+      setGithubProfile({
+        login: user.login,
+        name: user.name || '',
+        avatar_url: user.avatar_url || user.image || '',
+        bio: user.bio,
+        public_repos: user.public_repos || 0,
+        followers: user.followers || 0,
+        following: user.following || 0,
+        company: user.company,
+        location: user.location
+      })
     }
   }, [user])
 
@@ -70,19 +100,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     }
   }
 
-  const handleSignOut = async () => {
-    setIsLoggingOut(true)
-    
-    try {
-      await signOut()
-      router.push('/login')
-      router.refresh()
-    } catch (error) {
-      console.error('Error signing out:', error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -95,244 +113,308 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">Welcome, {user.email}</span>
-              <Button
-                variant="outline"
-                onClick={handleSignOut}
-                isLoading={isLoggingOut}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut ? 'Signing out...' : 'Sign out'}
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-white via-prism-teal/5 to-lavender-mist/10 dark:from-graphite dark:via-obsidian dark:to-graphite">
+
+      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-obsidian dark:text-pearl mb-2 flex items-center gap-2">
+            Welcome back, {githubProfile?.name?.split(' ')[0] || user.name?.split(' ')[0] || 'Developer'}!
+            <Hand className="w-8 h-8 text-prism-teal" />
+          </h2>
+          <p className="text-lg text-silver">
+            Ready to enhance your interview skills with AI-powered practice sessions?
+          </p>
         </div>
-      </nav>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg">
-            <div className="p-8">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Welcome to your Dashboard
-                </h2>
-                <p className="text-gray-600 mb-8">
-                  You have successfully logged into your SaaS platform account.
-                </p>
+        {/* AI Processing Alert */}
+        <div className="mb-6">
+          <InterviewAlert 
+            type="ai-processing" 
+            className="animate-prism-pulse"
+          />
+        </div>
+
+        {/* Account Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card variant="highlight">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-silver">Account Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <Badge variant="success" size="sm">
+                  Verified
+                </Badge>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                <div className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                          <svg
-                            className="w-5 h-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">
-                            Account Email
-                          </dt>
-                          <dd className="text-lg font-medium text-gray-900 truncate">
-                            {user.email}
-                          </dd>
-                        </dl>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                          <svg
-                            className="w-5 h-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">
-                            Account Status
-                          </dt>
-                          <dd className="text-lg font-medium text-gray-900">
-                            {user.email_confirmed_at ? 'Verified' : 'Pending Verification'}
-                          </dd>
-                        </dl>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                          <svg
-                            className="w-5 h-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">
-                            Member Since
-                          </dt>
-                          <dd className="text-sm font-medium text-gray-900">
-                            {formatDate(user.created_at)}
-                          </dd>
-                        </dl>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          <Card variant="highlight">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-silver">GitHub Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                {githubProfile ? (
+                  <Badge variant="success" size="sm">Connected</Badge>
+                ) : (
+                  <Badge variant="outline" size="sm">Not Connected</Badge>
+                )}
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="mt-8 bg-white shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    Account Information
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        User ID
-                      </label>
-                      <div className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                        {user.id}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Last Updated
-                      </label>
-                      <div className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                        {formatDate(user.updated_at || user.created_at)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          <Card variant="highlight">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-silver">Interview Ready</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InterviewStatusBadge status="scheduled" />
+            </CardContent>
+          </Card>
+
+          <Card variant="highlight">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-silver">Member Since</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm font-medium text-prism-teal">
+                {formatDate(new Date().toISOString()).split(',')[0]}
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              {/* GitHub Profile Section */}
-              {githubProfile && (
-                <div className="mt-8 bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <img
-                        className="h-16 w-16 rounded-full"
-                        src={githubProfile.avatar_url}
-                        alt={githubProfile.name || githubProfile.login}
-                      />
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {githubProfile.name || githubProfile.login}
-                        </h3>
-                        <p className="text-sm text-gray-500">@{githubProfile.login}</p>
-                        {githubProfile.bio && (
-                          <p className="text-sm text-gray-700 mt-1">{githubProfile.bio}</p>
+        {/* GitHub Profile Integration */}
+        {githubProfile && (
+          <Card className="mb-8" variant="interactive">
+            <CardHeader>
+              <CardTitle>GitHub Profile Integration</CardTitle>
+              <CardDescription>
+                Your GitHub data helps us personalize your interview experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-start space-x-4 mb-6">
+                <UserAvatar
+                  src={githubProfile.avatar_url}
+                  name={githubProfile.name || githubProfile.login}
+                  size="lg"
+                  variant="ai-prism"
+                />
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <h3 className="font-semibold text-obsidian dark:text-pearl text-lg">
+                      {githubProfile.name || githubProfile.login}
+                    </h3>
+                    <p className="text-sm text-prism-teal">@{githubProfile.login}</p>
+                    {githubProfile.bio && (
+                      <p className="text-sm text-silver mt-1">{githubProfile.bio}</p>
+                    )}
+                    {(githubProfile.company || githubProfile.location) && (
+                      <div className="flex items-center space-x-3 mt-2 text-xs text-silver">
+                        {githubProfile.company && (
+                          <span className="flex items-center gap-1">
+                            <Building className="w-3 h-3" />
+                            {githubProfile.company}
+                          </span>
                         )}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className="bg-gray-50 p-4 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-gray-900">{githubProfile.public_repos}</div>
-                        <div className="text-sm text-gray-500">Repositories</div>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-gray-900">{githubProfile.followers}</div>
-                        <div className="text-sm text-gray-500">Followers</div>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-gray-900">{githubProfile.following}</div>
-                        <div className="text-sm text-gray-500">Following</div>
-                      </div>
-                    </div>
-
-                    {githubRepos.length > 0 && (
-                      <div>
-                        <h4 className="text-md font-medium text-gray-900 mb-4">Recent Repositories</h4>
-                        <div className="space-y-3">
-                          {githubRepos.slice(0, 5).map((repo) => (
-                            <div key={repo.id} className="border border-gray-200 rounded-lg p-4">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h5 className="text-sm font-medium text-blue-600">{repo.name}</h5>
-                                  {repo.description && (
-                                    <p className="text-sm text-gray-600 mt-1">{repo.description}</p>
-                                  )}
-                                  <div className="flex items-center space-x-4 mt-2">
-                                    {repo.language && (
-                                      <span className="text-xs text-gray-500">{repo.language}</span>
-                                    )}
-                                    <span className="text-xs text-gray-500">⭐ {repo.stargazers_count}</span>
-                                    <span className="text-xs text-gray-500">
-                                      Updated {new Date(repo.updated_at).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        {githubProfile.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {githubProfile.location}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">Connected</Badge>
+                    <Badge variant="success">Verified</Badge>
+                    <AIPrismBadge size="sm">Profile Analyzed</AIPrismBadge>
+                  </div>
                 </div>
-              )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-gradient-to-br from-prism-teal/10 to-prism-teal/5 rounded-lg">
+                  <div className="text-2xl font-bold text-prism-teal">{githubProfile.public_repos}</div>
+                  <div className="text-sm text-silver">Repositories</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-lavender-mist/10 to-lavender-mist/5 rounded-lg">
+                  <div className="text-2xl font-bold text-lavender-mist">{githubProfile.followers}</div>
+                  <div className="text-sm text-silver">Followers</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-prism-teal/10 to-lavender-mist/10 rounded-lg">
+                  <div className="text-2xl font-bold bg-gradient-to-r from-prism-teal to-lavender-mist bg-clip-text text-transparent">{githubProfile.following}</div>
+                  <div className="text-sm text-silver">Following</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-              {!githubProfile && user.app_metadata?.provider !== 'github' && (
-                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <div className="flex items-center">
+        {/* Recent Repositories */}
+        {githubRepos.length > 0 && (
+          <Card className="mb-8" variant="ai-feature">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <span>Recent GitHub Repositories</span>
+                <AIPrismBadge size="sm">AI Analyzed</AIPrismBadge>
+              </CardTitle>
+              <CardDescription>
+                Your most recently updated repositories for technical interview preparation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {githubRepos.slice(0, 5).map((repo) => (
+                  <Card key={repo.id} variant="interactive" className="group">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-prism-teal group-hover:text-lavender-mist transition-colors">
+                            {repo.name}
+                          </h4>
+                          {repo.description && (
+                            <p className="text-sm text-silver mt-1 line-clamp-2">{repo.description}</p>
+                          )}
+                          <div className="flex items-center space-x-4 mt-2">
+                            {repo.language && (
+                              <Badge variant="outline" size="sm">{repo.language}</Badge>
+                            )}
+                            <span className="text-xs text-silver flex items-center">
+                              {repo.stargazers_count} stars
+                            </span>
+                            <span className="text-xs text-silver">
+                              Updated {new Date(repo.updated_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* AI Interview Options */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card variant="interactive" className="group">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Technical Interviews
+                <SkillBadge level="advanced" />
+              </CardTitle>
+              <CardDescription>
+                Practice coding challenges, algorithms, and technical problem solving with AI feedback
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-silver">
+                • Algorithm & Data Structures
+                • System Design Basics  
+                • Code Review & Debugging
+                • GitHub Repository Analysis
+              </div>
+              <Button className="w-full btn-primary group-hover:scale-105 transition-transform">
+                Start Technical Interview
+                <span className="ml-2">→</span>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card variant="interactive" className="group">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Behavioral Interviews
+                <SkillBadge level="intermediate" />
+              </CardTitle>
+              <CardDescription>
+                Improve your soft skills and behavioral responses with AI-powered coaching
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-silver">
+                • Leadership & Teamwork
+                • Conflict Resolution
+                • Communication Skills  
+                • STAR Method Practice
+              </div>
+              <Button className="w-full btn-secondary group-hover:scale-105 transition-transform">
+                Start Behavioral Interview
+                <span className="ml-2">→</span>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card variant="interactive" className="group">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                System Design
+                <SkillBadge level="expert" />
+              </CardTitle>
+              <CardDescription>
+                Master system architecture and design patterns for senior roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-silver">
+                • Scalability & Performance
+                • Database Design
+                • Architecture Patterns
+                • Real-world Case Studies
+              </div>
+              <Button className="w-full bg-gradient-to-r from-prism-teal to-lavender-mist text-white hover:shadow-prism-glow group-hover:scale-105 transition-all">
+                Start System Design Interview
+                <span className="ml-2">→</span>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Account Information */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Account Information</CardTitle>
+            <CardDescription>
+              Your secure account details and platform settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-silver">
+                  User ID
+                </label>
+                <div className="text-sm text-obsidian dark:text-pearl bg-gradient-to-r from-prism-teal/5 to-lavender-mist/5 p-3 rounded-lg border border-prism-teal/10 font-mono">
+                  {user.id}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-silver">
+                  Last Updated
+                </label>
+                <div className="text-sm text-obsidian dark:text-pearl bg-gradient-to-r from-prism-teal/5 to-lavender-mist/5 p-3 rounded-lg border border-prism-teal/10">
+                  {formatDate(new Date().toISOString())}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* GitHub Connection for non-GitHub users */}
+        {!githubProfile && !user.login && (
+          <Card className="mb-8" variant="ai-feature">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="h-12 w-12 bg-gradient-to-br from-prism-teal to-lavender-mist rounded-xl flex items-center justify-center">
                     <svg
-                      className="h-6 w-6 text-blue-600 mr-3"
+                      className="h-6 w-6 text-white"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -342,23 +424,74 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                         clipRule="evenodd"
                       />
                     </svg>
-                    <div>
-                      <h3 className="text-lg font-medium text-blue-900">Connect GitHub Profile</h3>
-                      <p className="text-sm text-blue-700 mt-1">
-                        Connect your GitHub account to import your profile and repositories for interview preparation.
-                      </p>
-                    </div>
                   </div>
                 </div>
-              )}
-
-              <div className="mt-8 text-center">
-                <p className="text-sm text-gray-500">
-                  Ready for your AI Interview Platform. Your authentication is secure and GitHub integration is ready.
-                </p>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-obsidian dark:text-pearl mb-2">
+                    Connect GitHub Profile
+                  </h3>
+                  <p className="text-silver text-sm mb-4">
+                    Connect your GitHub account to import your profile and repositories for personalized interview preparation with AI analysis.
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <AIPrismBadge size="sm">Enhanced Experience</AIPrismBadge>
+                    <Badge variant="info" size="sm">Recommended</Badge>
+                  </div>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quick Actions */}
+        <Card className="mb-8" variant="ai-feature">
+          <CardHeader>
+            <CardTitle>Quick Actions & Resources</CardTitle>
+            <CardDescription>
+              Jump into common interview scenarios or access learning resources
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-prism-teal/30 text-prism-teal hover:bg-prism-teal/10 flex-col h-auto py-3"
+                onClick={() => router.push('/interview')}
+              >
+                <Target className="w-5 h-5 mb-1" />
+                <span className="text-xs">AI Interview</span>
+              </Button>
+              <Button variant="outline" size="sm" className="border-prism-teal/30 text-prism-teal hover:bg-prism-teal/10 flex-col h-auto py-3">
+                <BarChart3 className="w-5 h-5 mb-1" />
+                <span className="text-xs">System Design</span>
+              </Button>
+              <Button variant="outline" size="sm" className="border-prism-teal/30 text-prism-teal hover:bg-prism-teal/10 flex-col h-auto py-3">
+                <BookOpen className="w-5 h-5 mb-1" />
+                <span className="text-xs">Resources</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-lavender-mist/30 text-lavender-mist hover:bg-lavender-mist/10 flex-col h-auto py-3"
+                onClick={() => router.push('/interview')}
+              >
+                <Sparkles className="w-5 h-5 mb-1" />
+                <span className="text-xs">Practice Now</span>
+              </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Platform Status */}
+        <div className="text-center py-6">
+          <div className="flex items-center justify-center space-x-2 mb-2">
+            <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-sm text-silver">Platform Status: All systems operational</span>
           </div>
+          <p className="text-xs text-silver">
+            Your AI Interview Platform is ready. Advanced features and GitHub integration available.
+          </p>
         </div>
       </main>
     </div>

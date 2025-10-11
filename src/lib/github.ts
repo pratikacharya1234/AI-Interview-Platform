@@ -1,28 +1,33 @@
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from "next-auth/react"
 
 export async function signInWithGitHub() {
-  const supabase = createClient()
-  
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'github',
-    options: {
-      scopes: 'read:user read:org repo',
-      redirectTo: `${window.location.origin}/dashboard`
+  try {
+    const result = await signIn('github', { 
+      callbackUrl: '/dashboard',
+      redirect: false 
+    })
+    
+    if (result?.error) {
+      return { success: false, error: { message: result.error } }
     }
-  })
-
-  if (error) {
-    return { success: false, error: { message: error.message } }
+    
+    return { success: true, data: result }
+  } catch (error) {
+    return { 
+      success: false, 
+      error: { message: error instanceof Error ? error.message : 'Unknown error' }
+    }
   }
-
-  return { success: true, data }
 }
 
-export async function getGitHubProfile(accessToken: string) {
+export async function getGitHubProfile(accessToken?: string) {
   try {
+    // Use provided access token or fallback to API token
+    const token = accessToken || process.env.GITHUB_API_TOKEN
+    
     const response = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `token ${accessToken}`,
+        'Authorization': `token ${token}`,
         'Accept': 'application/vnd.github.v3+json',
       },
     })
@@ -41,11 +46,14 @@ export async function getGitHubProfile(accessToken: string) {
   }
 }
 
-export async function getGitHubRepos(accessToken: string) {
+export async function getGitHubRepos(accessToken?: string) {
   try {
+    // Use provided access token or fallback to API token
+    const token = accessToken || process.env.GITHUB_API_TOKEN
+    
     const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=10', {
       headers: {
-        'Authorization': `token ${accessToken}`,
+        'Authorization': `token ${token}`,
         'Accept': 'application/vnd.github.v3+json',
       },
     })

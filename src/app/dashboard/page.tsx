@@ -1,18 +1,16 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useSession } from 'next-auth/react'
 import DashboardClient from './dashboard-client'
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
-  
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+export default function DashboardPage() {
+  const { data: session } = useSession()
 
-  if (error || !user) {
-    redirect('/login')
+  if (!session?.user) {
+    return null
   }
 
-  return <DashboardClient user={user} />
+  return (
+    <DashboardClient user={session.user} />
+  )
 }

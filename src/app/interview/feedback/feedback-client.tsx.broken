@@ -1,0 +1,685 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { AnimatedCard } from '@/components/ui/animations'
+import { 
+  MessageSquare, 
+  ThumbsUp,
+  ThumbsDown,
+  Star,
+  Target,
+  Brain,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle2,
+  PlayCircle,
+  Download,
+  Share2,
+  Lightbulb,
+  BookOpen,
+  Zap,
+  Award,
+  ArrowRight,
+  Eye,
+  Volume2,
+  BarChart3
+} from 'lucide-react'
+import Link from 'next/link'
+
+interface FeedbackData {
+  session_id: string
+  overall_score: number
+  date: string
+  duration: number
+  question_feedback: QuestionFeedback[]
+  strengths: string[]
+  areas_for_improvement: string[]
+  detailed_analysis: AnalysisSection[]
+  recommendations: Recommendation[]
+  next_steps: NextStep[]
+}
+
+interface QuestionFeedback {
+  id: string
+  question: string
+  user_answer: string
+  score: number
+  feedback: string
+  strengths: string[]
+  improvements: string[]
+  ideal_answer_points: string[]
+}
+
+interface AnalysisSection {
+  category: string
+  score: number
+  analysis: string
+  examples: string[]
+}
+
+interface Recommendation {
+  title: string
+  description: string
+  priority: 'high' | 'medium' | 'low'
+  resources: Resource[]
+}
+
+interface Resource {
+  title: string
+  type: 'article' | 'video' | 'practice' | 'book'
+  url: string
+}
+
+interface NextStep {
+  title: string
+  description: string
+  estimated_time: string
+  difficulty: 'easy' | 'medium' | 'hard'
+}
+
+export default function FeedbackClient() {
+  const [feedbackData, setFeedbackData] = useState<FeedbackData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadFeedbackData()
+  }, [])
+
+  const loadFeedbackData = async () => {
+    setIsLoading(true)
+    
+    try {
+      const supabase = createClient()
+      
+      // Fetch the most recent interview session
+      const { data: interviews, error } = await supabase
+        .from('interviews')
+        .select(`
+          id,
+          created_at,
+          overall_score,
+          duration,
+          responses (
+            id,
+            question_text,
+            user_answer,
+            score,
+            feedback,
+            strengths,
+            areas_for_improvement
+          ),
+          feedback
+        `)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+
+      if (!interviews) {
+        // No interview data available
+        const emptyData: FeedbackData = {
+          session_id: '',
+          overall_score: 0,
+          date: new Date().toISOString(),
+          duration: 0,
+      question_feedback: [
+        {
+          id: 'q1',
+          question: 'Can you explain the difference between React functional and class components?',
+          user_answer: 'Functional components are simpler and use hooks for state management, while class components use this.state...',
+          score: 9.1,
+          feedback: 'Excellent understanding of React components. You clearly explained the key differences and mentioned hooks appropriately.',
+          strengths: ['Clear explanation', 'Mentioned hooks', 'Good examples'],
+          improvements: ['Could have mentioned lifecycle methods', 'Performance comparison would be valuable'],
+          ideal_answer_points: [
+            'Functional components are JavaScript functions that return JSX',
+            'Class components extend React.Component',
+            'Hooks enable state and lifecycle methods in functional components',
+            'Functional components are generally more performant',
+            'Easier to test and reason about'
+          ]
+        },
+        {
+          id: 'q2',
+          question: 'How would you implement error handling in a React application?',
+          user_answer: 'I would use try-catch blocks and error boundaries...',
+          score: 7.5,
+          feedback: 'Good foundation but could be more comprehensive. You mentioned error boundaries which is great, but could elaborate on different error types.',
+          strengths: ['Mentioned error boundaries', 'Understanding of try-catch'],
+          improvements: ['Discuss async error handling', 'Error logging strategies', 'User experience considerations'],
+          ideal_answer_points: [
+            'Error boundaries for React component errors',
+            'Try-catch for async operations',
+            'Global error handlers for unhandled promises',
+            'Logging and monitoring solutions',
+            'Graceful UI fallbacks'
+          ]
+        },
+        {
+          id: 'q3',
+          question: 'Describe your approach to optimizing React application performance.',
+          user_answer: 'I use React.memo, useMemo, and useCallback for optimization...',
+          score: 8.7,
+          feedback: 'Strong answer covering key optimization techniques. Great understanding of memoization concepts.',
+          strengths: ['Mentioned key hooks', 'Understanding of memoization', 'Practical approach'],
+          improvements: ['Bundle optimization', 'Code splitting strategies', 'Image optimization'],
+          ideal_answer_points: [
+            'React.memo for component memoization',
+            'useMemo and useCallback for expensive calculations',
+            'Code splitting with React.lazy',
+            'Bundle optimization and tree shaking',
+            'Virtual scrolling for large lists',
+            'Image optimization and lazy loading'
+          ]
+        }
+      ],
+      strengths: [
+        'Strong technical knowledge of React ecosystem',
+        'Clear and articulate communication style',
+        'Good use of practical examples',
+        'Understanding of modern React patterns'
+      ],
+      areas_for_improvement: [
+        'Expand on performance optimization strategies',
+        'Include more real-world scenarios in answers',
+        'Discuss testing approaches more thoroughly',
+        'Cover accessibility considerations'
+      ],
+      detailed_analysis: [
+        {
+          category: 'Technical Knowledge',
+          score: 8.5,
+          analysis: 'Demonstrates solid understanding of React fundamentals and modern patterns. Strong grasp of hooks and functional components.',
+          examples: ['Correctly explained component types', 'Proper use of terminology', 'Understanding of React paradigms']
+        },
+        {
+          category: 'Communication',
+          score: 8.8,
+          analysis: 'Excellent communication skills with clear, structured answers. Good at explaining complex concepts simply.',
+          examples: ['Clear explanations', 'Logical flow', 'Good use of examples']
+        },
+        {
+          category: 'Problem Solving',
+          score: 7.9,
+          analysis: 'Good analytical approach but could benefit from more systematic problem-solving methodology.',
+          examples: ['Identifies key issues', 'Provides practical solutions', 'Could use more structured approach']
+        },
+        {
+          category: 'Best Practices',
+          score: 7.6,
+          analysis: 'Understands core best practices but could expand knowledge of advanced patterns and optimization techniques.',
+          examples: ['Knows basic patterns', 'Mentions performance considerations', 'Could cover more advanced topics']
+        }
+      ],
+      recommendations: [
+        {
+          title: 'Advanced React Patterns',
+          description: 'Study compound components, render props, and higher-order components for complex scenarios.',
+          priority: 'high',
+          resources: [
+            { title: 'React Patterns Guide', type: 'article', url: '/resources/react-patterns' },
+            { title: 'Advanced React Course', type: 'video', url: '/resources/advanced-react' }
+          ]
+        },
+        {
+          title: 'Performance Optimization Deep Dive',
+          description: 'Learn about bundle optimization, code splitting, and advanced performance techniques.',
+          priority: 'high',
+          resources: [
+            { title: 'React Performance Guide', type: 'article', url: '/resources/performance' },
+            { title: 'Performance Optimization Workshop', type: 'practice', url: '/practice/performance' }
+          ]
+        },
+        {
+          title: 'Testing Strategies',
+          description: 'Expand knowledge of testing React applications with Jest, React Testing Library, and E2E testing.',
+          priority: 'medium',
+          resources: [
+            { title: 'React Testing Masterclass', type: 'video', url: '/resources/testing' },
+            { title: 'Testing Best Practices', type: 'book', url: '/resources/testing-book' }
+          ]
+        }
+      ],
+      next_steps: [
+        {
+          title: 'Practice System Design',
+          description: 'Work on system design problems specifically for frontend applications',
+          estimated_time: '2-3 hours/week',
+          difficulty: 'medium'
+        },
+        {
+          title: 'Build a Complex Project',
+          description: 'Create a full-stack application implementing advanced React patterns',
+          estimated_time: '10-15 hours',
+          difficulty: 'hard'
+        },
+        {
+          title: 'Study Performance Metrics',
+          description: 'Learn about Core Web Vitals and performance measurement tools',
+          estimated_time: '3-4 hours',
+          difficulty: 'easy'
+        }
+      ]
+    }
+    
+    setFeedbackData(mockData)
+    setIsLoading(false)
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 9) return 'text-jade-success'
+    if (score >= 8) return 'text-prism-teal'
+    if (score >= 7) return 'text-amber-500'
+    if (score >= 6) return 'text-orange-500'
+    return 'text-rose-alert'
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'border-rose-alert text-rose-alert bg-rose-alert/10'
+      case 'medium': return 'border-amber-500 text-amber-500 bg-amber-500/10'
+      case 'low': return 'border-jade-success text-jade-success bg-jade-success/10'
+      default: return 'border-silver text-silver bg-silver/10'
+    }
+  }
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy': return 'bg-jade-success text-white'
+      case 'medium': return 'bg-amber-500 text-white'
+      case 'hard': return 'bg-rose-alert text-white'
+      default: return 'bg-silver text-white'
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-40 bg-silver/10 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (!feedbackData) {
+    return <div>No feedback data available</div>
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-obsidian dark:text-pearl mb-2">
+              Interview Feedback
+            </h1>
+            <p className="text-silver">
+              AI-powered analysis of your interview performance with actionable insights
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export Report
+            </Button>
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Share2 className="w-4 h-4" />
+              Share
+            </Button>
+          </div>
+        </div>
+
+        {/* Session Info */}
+        <div className="flex items-center gap-6 text-sm text-silver">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            {new Date(feedbackData.date).toLocaleDateString()} • {feedbackData.duration} minutes
+          </div>
+          <div className={`text-2xl font-bold ${getScoreColor(feedbackData.overall_score)}`}>
+            Overall Score: {feedbackData.overall_score}/10
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-silver/20">
+        {[
+          { id: 'overview', label: 'Overview', icon: Star },
+          { id: 'questions', label: 'Question Analysis', icon: MessageSquare },
+          { id: 'analysis', label: 'Detailed Analysis', icon: Brain },
+          { id: 'recommendations', label: 'Recommendations', icon: Lightbulb },
+          { id: 'next-steps', label: 'Next Steps', icon: Target }
+        ].map(tab => {
+          const IconComponent = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                flex items-center gap-2 px-4 py-2 font-medium text-sm border-b-2 transition-colors
+                ${activeTab === tab.id
+                  ? 'border-prism-teal text-prism-teal'
+                  : 'border-transparent text-silver hover:text-obsidian dark:hover:text-pearl'
+                }
+              `}
+            >
+              <IconComponent className="w-4 h-4" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Performance Summary */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            <AnimatedCard>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-jade-success">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Strengths
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {feedbackData.strengths.map((strength, index) => (
+                  <div key={index} className="flex items-start gap-3 p-3 bg-jade-success/5 border border-jade-success/20 rounded-lg">
+                    <ThumbsUp className="w-4 h-4 text-jade-success mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-obsidian dark:text-pearl">{strength}</div>
+                  </div>
+                ))}
+              </CardContent>
+            </AnimatedCard>
+
+            <AnimatedCard>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-500">
+                  <AlertCircle className="w-5 h-5" />
+                  Areas for Improvement
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {feedbackData.areas_for_improvement.map((area, index) => (
+                  <div key={index} className="flex items-start gap-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                    <Target className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-obsidian dark:text-pearl">{area}</div>
+                  </div>
+                ))}
+              </CardContent>
+            </AnimatedCard>
+          </div>
+
+          {/* Question Scores Overview */}
+          <AnimatedCard>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-prism-teal" />
+                Question Performance Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {feedbackData.question_feedback.map((q, index) => (
+                  <div key={q.id} className="p-4 border border-silver/20 rounded-lg">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="font-medium text-obsidian dark:text-pearl mb-1">
+                          Question {index + 1}
+                        </div>
+                        <div className="text-sm text-silver line-clamp-2">{q.question}</div>
+                      </div>
+                      <div className={`font-bold text-lg ${getScoreColor(q.score)}`}>
+                        {q.score}/10
+                      </div>
+                    </div>
+                    <Progress value={q.score * 10} variant="ai-prism" className="h-2" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </AnimatedCard>
+        </div>
+      )}
+
+      {/* Questions Tab */}
+      {activeTab === 'questions' && (
+        <div className="space-y-6">
+          {feedbackData.question_feedback.map((question, index) => (
+            <AnimatedCard key={question.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg mb-2">Question {index + 1}</CardTitle>
+                    <CardDescription className="text-base">{question.question}</CardDescription>
+                  </div>
+                  <div className={`text-2xl font-bold ${getScoreColor(question.score)}`}>
+                    {question.score}/10
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Your Answer */}
+                <div>
+                  <h4 className="font-semibold text-obsidian dark:text-pearl mb-2 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Your Answer
+                  </h4>
+                  <div className="p-3 bg-silver/5 rounded-lg text-sm">
+                    {question.user_answer}
+                  </div>
+                </div>
+
+                {/* AI Feedback */}
+                <div>
+                  <h4 className="font-semibold text-obsidian dark:text-pearl mb-2 flex items-center gap-2">
+                    <Brain className="w-4 h-4" />
+                    AI Feedback
+                  </h4>
+                  <div className="p-3 bg-prism-teal/5 border border-prism-teal/20 rounded-lg text-sm">
+                    {question.feedback}
+                  </div>
+                </div>
+
+                {/* Strengths and Improvements */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-medium text-jade-success mb-2 flex items-center gap-2">
+                      <ThumbsUp className="w-4 h-4" />
+                      What you did well
+                    </h5>
+                    <ul className="space-y-1">
+                      {question.strengths.map((strength, idx) => (
+                        <li key={idx} className="text-sm text-silver flex items-start gap-2">
+                          <CheckCircle2 className="w-3 h-3 text-jade-success mt-0.5 flex-shrink-0" />
+                          {strength}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-amber-500 mb-2 flex items-center gap-2">
+                      <Target className="w-4 h-4" />
+                      Areas to improve
+                    </h5>
+                    <ul className="space-y-1">
+                      {question.improvements.map((improvement, idx) => (
+                        <li key={idx} className="text-sm text-silver flex items-start gap-2">
+                          <AlertCircle className="w-3 h-3 text-amber-500 mt-0.5 flex-shrink-0" />
+                          {improvement}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Ideal Answer Points */}
+                <div>
+                  <h5 className="font-medium text-obsidian dark:text-pearl mb-2 flex items-center gap-2">
+                    <Star className="w-4 h-4" />
+                    Key points for ideal answer
+                  </h5>
+                  <ul className="space-y-2">
+                    {question.ideal_answer_points.map((point, idx) => (
+                      <li key={idx} className="text-sm text-silver flex items-start gap-2">
+                        <ArrowRight className="w-3 h-3 text-prism-teal mt-0.5 flex-shrink-0" />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </AnimatedCard>
+          ))}
+        </div>
+      )}
+
+      {/* Analysis Tab */}
+      {activeTab === 'analysis' && (
+        <div className="space-y-6">
+          {feedbackData.detailed_analysis.map((analysis, index) => (
+            <AnimatedCard key={index}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="w-5 h-5 text-prism-teal" />
+                    {analysis.category}
+                  </CardTitle>
+                  <div className={`text-xl font-bold ${getScoreColor(analysis.score)}`}>
+                    {analysis.score}/10
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Progress value={analysis.score * 10} variant="ai-prism" className="h-3 mb-3" />
+                  <p className="text-silver">{analysis.analysis}</p>
+                </div>
+                <div>
+                  <h5 className="font-medium text-obsidian dark:text-pearl mb-2">Evidence & Examples</h5>
+                  <ul className="space-y-1">
+                    {analysis.examples.map((example, idx) => (
+                      <li key={idx} className="text-sm text-silver flex items-start gap-2">
+                        <CheckCircle2 className="w-3 h-3 text-prism-teal mt-0.5 flex-shrink-0" />
+                        {example}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </AnimatedCard>
+          ))}
+        </div>
+      )}
+
+      {/* Recommendations Tab */}
+      {activeTab === 'recommendations' && (
+        <div className="space-y-6">
+          {feedbackData.recommendations.map((rec, index) => (
+            <AnimatedCard key={index}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lightbulb className="w-5 h-5 text-prism-teal" />
+                      {rec.title}
+                    </CardTitle>
+                    <CardDescription className="mt-2">{rec.description}</CardDescription>
+                  </div>
+                  <Badge className={getPriorityColor(rec.priority)}>
+                    {rec.priority.charAt(0).toUpperCase() + rec.priority.slice(1)} Priority
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <h5 className="font-medium text-obsidian dark:text-pearl mb-3 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    Recommended Resources
+                  </h5>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {rec.resources.map((resource, idx) => (
+                      <Link key={idx} href={resource.url} className="block">
+                        <div className="p-3 border border-silver/20 rounded-lg hover:border-prism-teal/50 transition-colors">
+                          <div className="flex items-center gap-2 mb-1">
+                            {resource.type === 'article' && <BookOpen className="w-4 h-4 text-prism-teal" />}
+                            {resource.type === 'video' && <PlayCircle className="w-4 h-4 text-prism-teal" />}
+                            {resource.type === 'practice' && <Target className="w-4 h-4 text-prism-teal" />}
+                            {resource.type === 'book' && <BookOpen className="w-4 h-4 text-prism-teal" />}
+                            <span className="font-medium text-sm">{resource.title}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs capitalize">
+                            {resource.type}
+                          </Badge>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </AnimatedCard>
+          ))}
+        </div>
+      )}
+
+      {/* Next Steps Tab */}
+      {activeTab === 'next-steps' && (
+        <div className="space-y-6">
+          <AnimatedCard>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-prism-teal" />
+                Your Learning Path
+              </CardTitle>
+              <CardDescription>
+                Recommended next steps to continue improving your interview skills
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {feedbackData.next_steps.map((step, index) => (
+                  <div key={index} className="p-4 border border-silver/20 rounded-lg">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-obsidian dark:text-pearl mb-1">
+                          {step.title}
+                        </h4>
+                        <p className="text-sm text-silver">{step.description}</p>
+                      </div>
+                      <Badge className={getDifficultyColor(step.difficulty)}>
+                        {step.difficulty.charAt(0).toUpperCase() + step.difficulty.slice(1)}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-silver">
+                        <Clock className="w-4 h-4" />
+                        {step.estimated_time}
+                      </div>
+                      <Button size="sm" className="flex items-center gap-2">
+                        Start Now
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </AnimatedCard>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -56,11 +56,14 @@ export async function middleware(request: NextRequest) {
 
   const {
     data: { user },
+    error: authError
   } = await supabase.auth.getUser()
+
+  console.log(`[MIDDLEWARE] ${request.nextUrl.pathname} - User: ${user ? user.email : 'None'}, Error: ${authError?.message || 'None'}`)
 
   // Protected routes
   const protectedRoutes = ['/dashboard', '/profile']
-  const authRoutes = ['/login', '/register']
+  const authRoutes = ['/signin', '/signup']
   
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -72,13 +75,17 @@ export async function middleware(request: NextRequest) {
 
   // Redirect unauthenticated users from protected routes
   if (isProtectedRoute && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    console.log(`[MIDDLEWARE] Redirecting ${request.nextUrl.pathname} to /signin - no user`)
+    return NextResponse.redirect(new URL('/signin', request.url))
   }
 
   // Redirect authenticated users from auth routes
   if (isAuthRoute && user) {
+    console.log(`[MIDDLEWARE] Redirecting ${request.nextUrl.pathname} to /dashboard - user authenticated`)
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
+
+  console.log(`[MIDDLEWARE] Allowing ${request.nextUrl.pathname}`)  
 
   return response
 }
