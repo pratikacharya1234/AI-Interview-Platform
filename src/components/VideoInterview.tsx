@@ -511,8 +511,15 @@ export default function VideoInterview({ onComplete }: VideoInterviewProps) {
     }
   }, [state.isMuted])
 
-  // Toggle video
+  // Toggle video with confirmation during active interviews
   const toggleVideo = useCallback(() => {
+    // Show confirmation if interview is active and user is trying to disable video
+    if (state.isActive && state.isVideoEnabled) {
+      if (!confirm('Are you sure you want to turn off your camera during the interview? This may affect the interview experience.')) {
+        return
+      }
+    }
+    
     setState(prev => ({ ...prev, isVideoEnabled: !prev.isVideoEnabled }))
     
     if (mediaStreamRef.current) {
@@ -521,7 +528,7 @@ export default function VideoInterview({ onComplete }: VideoInterviewProps) {
         videoTrack.enabled = !state.isVideoEnabled
       }
     }
-  }, [state.isVideoEnabled])
+  }, [state.isVideoEnabled, state.isActive])
 
   // Toggle mute
   const toggleMute = useCallback(() => {
