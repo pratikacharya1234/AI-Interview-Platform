@@ -328,25 +328,22 @@ export default function VideoInterview({ onComplete }: VideoInterviewProps) {
     }
   ]
 
-  // Initialize camera and microphone with production-ready validation
+  // HACKATHON: Super simple video initialization
   const initializeMedia = useCallback(async () => {
     try {
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera and microphone access is not supported in this browser. Please use Chrome, Firefox, or Safari.')
-      }
-
-      // Check device availability first
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const videoDevices = devices.filter(device => device.kind === 'videoinput')
-      const audioDevices = devices.filter(device => device.kind === 'audioinput')
-
-      if (videoDevices.length === 0) {
-        throw new Error('No camera detected. Please connect a camera to continue with the video interview.')
-      }
-
-      if (audioDevices.length === 0) {
-        throw new Error('No microphone detected. Please connect a microphone to continue with the interview.')
+      console.log('🚀 HACKATHON: Quick video setup')
+      
+      // Simple constraints for hackathon demo
+      const constraints = {
+        video: {
+          width: 640,
+          height: 480,
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
       }
 
       // ADVANCED: Progressive quality fallback system for maximum compatibility
