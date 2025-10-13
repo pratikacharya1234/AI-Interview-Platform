@@ -1,15 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Mic, 
-  Volume2, 
-  Play, 
+import {
+  Mic,
+  Volume2,
+  Play,
   Pause,
   Square,
   BarChart3,
@@ -195,10 +194,8 @@ export default function VoiceAnalysisPage() {
     })
   }
 
-  return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
+  return <div className="space-y-6">
+      {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -570,6 +567,5 @@ export default function VoiceAnalysisPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
-  )
+    </div>
 }

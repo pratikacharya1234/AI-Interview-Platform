@@ -1,18 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Brain, 
-  MessageSquare, 
-  Target, 
-  TrendingUp, 
+import {
+  Brain,
+  MessageSquare,
+  Target,
+  TrendingUp,
   Star,
   Play,
   Pause,
@@ -225,8 +224,7 @@ export default function AICoachPage() {
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -535,6 +533,7 @@ export default function AICoachPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </div>
+  </div>
   )
 }
