@@ -18,7 +18,8 @@ import {
   MessageSquare,
   History,
   Award,
-  HelpCircle
+  HelpCircle,
+  Brain
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,26 +38,6 @@ const navigationItems = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: Home,
-  },
-  {
-    name: 'Interview',
-    href: '/interview',
-    icon: MessageSquare,
-  },
-  {
-    name: 'Analytics',
-    href: '/analytics',
-    icon: BarChart3,
-  },
-  {
-    name: 'Resources',
-    href: '/resources',
-    icon: BookOpen,
-  },
-  {
-    name: 'History',
-    href: '/interview/history',
-    icon: History,
   }
 ]
 
@@ -103,7 +84,7 @@ export function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Minimal */}
           <nav className="hidden md:flex items-center space-x-6 ml-8">
             {navigationItems.map((item) => {
               const Icon = item.icon
@@ -122,6 +103,18 @@ export function Navbar() {
                 </Link>
               )
             })}
+            {/* Quick AI Features Link */}
+            <Link
+              href="/ai/coach"
+              className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive('/ai')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`}
+            >
+              <Brain className="h-4 w-4" />
+              <span>AI</span>
+            </Link>
           </nav>
         </div>
 
@@ -255,6 +248,31 @@ export function Navbar() {
                   </Link>
                 )
               })}
+              {/* Quick access to key features */}
+              <Link
+                href="/interview"
+                className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/interview')
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>Start Interview</span>
+              </Link>
+              <Link
+                href="/ai/coach"
+                className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/ai')
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Brain className="h-4 w-4" />
+                <span>AI Features</span>
+              </Link>
             </nav>
 
             {/* Mobile User Info */}
