@@ -567,5 +567,4 @@ export default function VoiceAnalysisPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
 }

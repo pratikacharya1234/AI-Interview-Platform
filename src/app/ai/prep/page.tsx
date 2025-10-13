@@ -475,5 +475,4 @@ export default function PersonalizedPrepPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
 }

@@ -533,7 +533,5 @@ export default function AICoachPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  </div>
   )
 }

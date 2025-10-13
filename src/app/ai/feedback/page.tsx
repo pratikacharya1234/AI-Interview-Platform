@@ -443,5 +443,4 @@ export default function SmartFeedbackPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
 }
