@@ -25,6 +25,7 @@ import {
   Award,
   AlertTriangle
 } from 'lucide-react'
+import { AIFeatureNav } from '@/components/navigation/ai-feature-nav'
 
 interface CoachingSession {
   id: string
@@ -532,6 +533,9 @@ export default function AICoachPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Feature Navigation */}
+        <AIFeatureNav className="mt-8" />
       </div>
   )
 }

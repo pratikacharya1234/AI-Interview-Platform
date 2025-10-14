@@ -152,34 +152,9 @@ const navigationItems: SidebarItem[] = [
   {
     id: 'ai-features',
     name: 'AI Features',
+    href: '/ai/coach',
     icon: Zap,
     badge: 'New',
-    children: [
-      {
-        id: 'ai-coach',
-        name: 'AI Interview Coach',
-        href: '/ai/coach',
-        icon: Brain,
-      },
-      {
-        id: 'voice-analysis',
-        name: 'Voice Analysis',
-        href: '/ai/voice',
-        icon: Headphones,
-      },
-      {
-        id: 'smart-feedback',
-        name: 'Smart Feedback',
-        href: '/ai/feedback',
-        icon: Star,
-      },
-      {
-        id: 'personalized-prep',
-        name: 'Personalized Prep',
-        href: '/ai/prep',
-        icon: Target,
-      },
-    ]
   },
   {
     id: 'account',
