@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { AppLayout } from '@/components/layout/app-layout'
-import { PageHeader } from '@/components/navigation/breadcrumbs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -134,13 +132,14 @@ export default function AchievementsPage() {
   ]
 
   return (
-    <AppLayout>
-      <PageHeader 
-        title="Achievements"
-        description="Track your progress and unlock achievements as you improve your interview skills."
-      />
-
-      <div className="space-y-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Achievements</h1>
+        <p className="text-muted-foreground">
+          Track your progress and unlock achievements as you improve your interview skills.
+        </p>
+      </div>
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -313,7 +312,6 @@ export default function AchievementsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </AppLayout>
+    </div>
   )
 }

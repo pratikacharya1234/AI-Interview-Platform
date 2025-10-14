@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AppLayout } from '@/components/layout/app-layout'
-import { PageHeader } from '@/components/navigation/breadcrumbs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -176,13 +174,14 @@ export default function PracticePage() {
     .reduce((acc, q) => acc + (q.lastScore || 0), 0) / practiceQuestions.filter(q => q.lastScore).length || 0
 
   return (
-    <AppLayout>
-      <PageHeader 
-        title="Practice Questions"
-        description="Sharpen your interview skills with our comprehensive collection of practice questions."
-      />
-
-      <div className="space-y-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Practice Questions</h1>
+        <p className="text-muted-foreground">
+          Sharpen your interview skills with our comprehensive collection of practice questions.
+        </p>
+      </div>
         {/* Progress Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -384,7 +383,6 @@ export default function PracticePage() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </AppLayout>
+    </div>
   )
 }
