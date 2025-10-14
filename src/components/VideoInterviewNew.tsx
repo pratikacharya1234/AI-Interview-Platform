@@ -1,11 +1,12 @@
 'use client'
 
 /**
- * Real-Time Voice Interview Component
- * - Listens to user audio in real-time
- * - Uses Gemini AI for transcription and responses
- * - Uses ElevenLabs for natural voice
- * - Saves complete interview data to Supabase
+ * Turn-Based Voice Interview Component
+ * - AI speaks first, then waits for user to finish
+ * - User speaks, AI listens to complete response
+ * - AI analyzes user's actual audio content
+ * - AI responds based on what user said (no pre-made prompts)
+ * - True conversational flow
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -22,14 +23,14 @@ import {
   Video,
   VideoOff,
   Volume2,
-  VolumeX,
   Loader2,
   CheckCircle,
   AlertCircle,
   PhoneOff,
   User,
   Bot,
-  Clock
+  Clock,
+  Pause
 } from 'lucide-react'
 
 interface Message {
@@ -37,23 +38,11 @@ interface Message {
   role: 'interviewer' | 'candidate'
   content: string
   timestamp: Date
-  audioUrl?: string
 }
 
-interface InterviewSession {
-  id: string
-  userId: string
-  userEmail: string
-  startTime: Date
-  endTime?: Date
-  duration: number
-  messages: Message[]
-  status: 'active' | 'completed' | 'cancelled'
-  position: string
-  company: string
-}
+type ConversationState = 'ai_speaking' | 'waiting_for_user' | 'user_speaking' | 'processing' | 'completed'
 
-export default function VideoInterviewRealtime() {
+export default function VideoInterviewNew() {
   const router = useRouter()
   const { data: session } = useSession()
   
@@ -64,29 +53,24 @@ export default function VideoInterviewRealtime() {
   const audioChunksRef = useRef<Blob[]>([])
   const audioContextRef = useRef<AudioContext | null>(null)
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null)
-  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   // State
-  const [interviewState, setInterviewState] = useState<'setup' | 'active' | 'completed'>('setup')
+  const [conversationState, setConversationState] = useState<ConversationState>('ai_speaking')
   const [messages, setMessages] = useState<Message[]>([])
-  const [isRecording, setIsRecording] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
   const [isVideoEnabled, setIsVideoEnabled] = useState(true)
-  const [isMuted, setIsMuted] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sessionId, setSessionId] = useState<string>('')
-  const [startTime, setStartTime] = useState<Date | null>(null)
-  const [currentTranscript, setCurrentTranscript] = useState<string>('')
+  const [sessionId] = useState<string>(`interview_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+  const [startTime] = useState<Date>(new Date())
   const [questionCount, setQuestionCount] = useState(0)
+  const [interviewStarted, setInterviewStarted] = useState(false)
   
-  // Interview configuration
-  const [position] = useState('Software Developer')
-  const [company] = useState('Tech Company')
   const maxQuestions = 6
+  const position = 'Software Developer'
+  const company = 'Tech Company'
 
   /**
-   * Initialize media devices (camera and microphone)
+   * Initialize media devices
    */
   const initializeMedia = useCallback(async () => {
     try {
@@ -110,7 +94,6 @@ export default function VideoInterviewRealtime() {
         videoRef.current.srcObject = stream
       }
 
-      // Initialize audio context
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
       
       return true
@@ -122,53 +105,71 @@ export default function VideoInterviewRealtime() {
   }, [])
 
   /**
-   * Start the interview
+   * Speak text using ElevenLabs
    */
-  const startInterview = useCallback(async () => {
-    const mediaReady = await initializeMedia()
-    if (!mediaReady) return
-
-    const newSessionId = `interview_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    setSessionId(newSessionId)
-    setStartTime(new Date())
-    setInterviewState('active')
-    setQuestionCount(0)
-
-    // Start with greeting
-    const greeting = `Hello! I'm Sarah, your AI interviewer. Welcome to your interview for the ${position} position at ${company}. Let's begin. Please tell me about yourself and your background.`
-    
-    const greetingMessage: Message = {
-      id: `msg_${Date.now()}`,
-      role: 'interviewer',
-      content: greeting,
-      timestamp: new Date()
-    }
-    
-    setMessages([greetingMessage])
-    setQuestionCount(1)
-    
-    // Speak greeting
-    await speakText(greeting)
-    
-    // Start listening for response
-    setTimeout(() => {
-      startListening()
-    }, 1000)
-    
-  }, [position, company])
-
-  /**
-   * Start recording user's audio
-   */
-  const startListening = useCallback(async () => {
-    if (!mediaStreamRef.current || isRecording) return
+  const speakText = useCallback(async (text: string): Promise<void> => {
+    setConversationState('ai_speaking')
 
     try {
-      setIsRecording(true)
+      console.log('🔊 AI Speaking:', text)
+      
+      const response = await fetch('/api/tts/elevenlabs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: 'Rachel' })
+      })
+
+      if (!response.ok) {
+        throw new Error('TTS failed')
+      }
+
+      const audioData = await response.arrayBuffer()
+
+      if (audioContextRef.current) {
+        const audioBuffer = await audioContextRef.current.decodeAudioData(audioData)
+        
+        if (currentAudioSourceRef.current) {
+          currentAudioSourceRef.current.stop()
+        }
+
+        const source = audioContextRef.current.createBufferSource()
+        source.buffer = audioBuffer
+        source.connect(audioContextRef.current.destination)
+        
+        currentAudioSourceRef.current = source
+
+        await new Promise<void>((resolve) => {
+          source.onended = () => {
+            console.log('✅ AI finished speaking')
+            resolve()
+          }
+          source.start()
+        })
+      }
+
+    } catch (err: any) {
+      console.error('Speech error:', err)
+      // Fallback to browser TTS
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = 0.9
+      await new Promise<void>((resolve) => {
+        utterance.onend = () => resolve()
+        speechSynthesis.speak(utterance)
+      })
+    }
+  }, [])
+
+  /**
+   * Start recording user's response
+   */
+  const startRecording = useCallback(async () => {
+    if (!mediaStreamRef.current) return
+
+    try {
+      setConversationState('user_speaking')
       setError(null)
       audioChunksRef.current = []
 
-      // Create media recorder
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : 'audio/webm'
@@ -186,69 +187,47 @@ export default function VideoInterviewRealtime() {
         }
       }
 
-      mediaRecorder.start(100) // Collect data every 100ms
-      console.log('🎤 Started recording')
-
-      // Auto-stop after 30 seconds
-      recordingTimeoutRef.current = setTimeout(() => {
-        stopListening()
-      }, 30000)
+      mediaRecorder.start(100)
+      console.log('🎤 User can speak now')
 
     } catch (err: any) {
       console.error('Recording error:', err)
       setError(`Failed to start recording: ${err.message}`)
-      setIsRecording(false)
     }
-  }, [isRecording])
+  }, [])
 
   /**
-   * Stop recording and process audio
+   * Stop recording
    */
-  const stopListening = useCallback(async () => {
-    if (!mediaRecorderRef.current || !isRecording) return
+  const stopRecording = useCallback(async (): Promise<Blob | null> => {
+    if (!mediaRecorderRef.current) return null
 
-    try {
-      setIsRecording(false)
-      
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current)
-      }
-
-      // Stop recording
-      mediaRecorderRef.current.stop()
-      
-      // Wait for all data to be collected
-      await new Promise(resolve => setTimeout(resolve, 300))
-
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-      console.log('🎤 Stopped recording, blob size:', audioBlob.size)
-
-      if (audioBlob.size < 1000) {
-        setError('Recording too short. Please speak longer.')
-        setTimeout(() => startListening(), 2000)
+    return new Promise((resolve) => {
+      if (!mediaRecorderRef.current) {
+        resolve(null)
         return
       }
 
-      // Process the audio
-      await processAudio(audioBlob)
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        console.log('🎤 Recording stopped, blob size:', audioBlob.size)
+        resolve(audioBlob)
+      }
 
-    } catch (err: any) {
-      console.error('Stop recording error:', err)
-      setError(`Failed to process recording: ${err.message}`)
-      setIsProcessing(false)
-    }
-  }, [isRecording])
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current = null
+    })
+  }, [])
 
   /**
-   * Process audio: transcribe and get AI response
+   * Process user's audio and get AI response
    */
-  const processAudio = useCallback(async (audioBlob: Blob) => {
-    setIsProcessing(true)
-    setCurrentTranscript('')
+  const processUserResponse = useCallback(async (audioBlob: Blob) => {
+    setConversationState('processing')
 
     try {
-      // 1. Transcribe audio
-      console.log('🎯 Transcribing audio...')
+      // 1. Transcribe user's audio
+      console.log('🎯 Transcribing user audio...')
       const formData = new FormData()
       formData.append('audio', audioBlob, 'recording.webm')
       formData.append('language', 'en-US')
@@ -263,31 +242,30 @@ export default function VideoInterviewRealtime() {
       }
 
       const transcribeData = await transcribeResponse.json()
-      const transcript = transcribeData.transcript
+      const userTranscript = transcribeData.transcript
 
-      if (!transcript || transcript.length < 3) {
+      if (!userTranscript || userTranscript.length < 3) {
         setError('No speech detected. Please try again.')
-        setIsProcessing(false)
-        setTimeout(() => startListening(), 2000)
+        setConversationState('waiting_for_user')
         return
       }
 
-      console.log('✅ Transcript:', transcript)
-      setCurrentTranscript(transcript)
+      console.log('✅ User said:', userTranscript)
 
-      // Add candidate message
-      const candidateMessage: Message = {
+      // Add user message
+      const userMessage: Message = {
         id: `msg_${Date.now()}`,
         role: 'candidate',
-        content: transcript,
+        content: userTranscript,
         timestamp: new Date()
       }
       
-      setMessages(prev => [...prev, candidateMessage])
+      setMessages(prev => [...prev, userMessage])
 
-      // 2. Get AI response
-      console.log('🧠 Getting AI response...')
-      const conversationHistory = [...messages, candidateMessage].map(msg => ({
+      // 2. Get AI response based on what user actually said
+      console.log('🧠 Getting AI response based on user\'s actual words...')
+      
+      const conversationHistory = [...messages, userMessage].map(msg => ({
         role: msg.role === 'candidate' ? 'user' : 'assistant',
         content: msg.content
       }))
@@ -296,7 +274,7 @@ export default function VideoInterviewRealtime() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: transcript,
+          message: userTranscript,
           conversationHistory,
           interviewContext: {
             position,
@@ -314,126 +292,113 @@ export default function VideoInterviewRealtime() {
       const aiData = await aiResponse.json()
       const aiText = aiData.response
 
-      console.log('✅ AI Response:', aiText)
+      console.log('✅ AI responds:', aiText)
 
-      // Add interviewer message
-      const interviewerMessage: Message = {
+      // Add AI message
+      const aiMessage: Message = {
         id: `msg_${Date.now()}`,
         role: 'interviewer',
         content: aiText,
         timestamp: new Date()
       }
       
-      setMessages(prev => [...prev, interviewerMessage])
+      setMessages(prev => [...prev, aiMessage])
       setQuestionCount(prev => prev + 1)
-      setIsProcessing(false)
 
-      // 3. Speak AI response
+      // 3. AI speaks the response
       await speakText(aiText)
 
-      // 4. Continue or end interview
-      if (questionCount >= maxQuestions) {
+      // 4. Check if interview should end
+      if (questionCount >= maxQuestions - 1) {
         await endInterview()
       } else {
-        setTimeout(() => startListening(), 1000)
+        // Wait for user to speak next
+        setConversationState('waiting_for_user')
       }
 
     } catch (err: any) {
-      console.error('Process audio error:', err)
+      console.error('Process error:', err)
       setError(`Failed to process response: ${err.message}`)
-      setIsProcessing(false)
-      
-      // Retry listening
-      setTimeout(() => startListening(), 3000)
+      setConversationState('waiting_for_user')
     }
-  }, [messages, questionCount, position, company, maxQuestions])
+  }, [messages, questionCount, speakText, position, company, maxQuestions])
 
   /**
-   * Speak text using ElevenLabs
+   * Start the interview
    */
-  const speakText = useCallback(async (text: string) => {
-    setIsSpeaking(true)
+  const startInterview = useCallback(async () => {
+    const mediaReady = await initializeMedia()
+    if (!mediaReady) return
 
-    try {
-      console.log('🔊 Generating speech...')
-      
-      const response = await fetch('/api/tts/elevenlabs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voice: 'Rachel'
-        })
-      })
+    setInterviewStarted(true)
+    setQuestionCount(1)
 
-      if (!response.ok) {
-        throw new Error('TTS failed')
-      }
-
-      const audioData = await response.arrayBuffer()
-
-      // Play audio
-      if (audioContextRef.current) {
-        const audioBuffer = await audioContextRef.current.decodeAudioData(audioData)
-        
-        // Stop current audio if playing
-        if (currentAudioSourceRef.current) {
-          currentAudioSourceRef.current.stop()
-        }
-
-        const source = audioContextRef.current.createBufferSource()
-        source.buffer = audioBuffer
-        source.connect(audioContextRef.current.destination)
-        
-        currentAudioSourceRef.current = source
-
-        await new Promise<void>((resolve) => {
-          source.onended = () => {
-            setIsSpeaking(false)
-            resolve()
-          }
-          source.start()
-        })
-      }
-
-    } catch (err: any) {
-      console.error('Speech error:', err)
-      // Fallback to browser TTS
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 0.9
-      utterance.onend = () => setIsSpeaking(false)
-      speechSynthesis.speak(utterance)
+    // AI greeting
+    const greeting = `Hello! I'm Sarah, your AI interviewer. Welcome to your interview for the ${position} position at ${company}. I'll ask you questions and listen carefully to your responses. Let's begin. Please tell me about yourself and your background.`
+    
+    const greetingMessage: Message = {
+      id: `msg_${Date.now()}`,
+      role: 'interviewer',
+      content: greeting,
+      timestamp: new Date()
     }
-  }, [])
+    
+    setMessages([greetingMessage])
+    
+    // AI speaks greeting
+    await speakText(greeting)
+    
+    // Now wait for user to respond
+    setConversationState('waiting_for_user')
+    
+  }, [initializeMedia, speakText, position, company])
 
   /**
-   * End interview and save to database
+   * User clicks to start speaking
+   */
+  const handleUserStartSpeaking = useCallback(async () => {
+    await startRecording()
+  }, [startRecording])
+
+  /**
+   * User clicks to stop speaking
+   */
+  const handleUserStopSpeaking = useCallback(async () => {
+    const audioBlob = await stopRecording()
+    
+    if (audioBlob && audioBlob.size > 1000) {
+      await processUserResponse(audioBlob)
+    } else {
+      setError('Recording too short. Please speak longer.')
+      setConversationState('waiting_for_user')
+    }
+  }, [stopRecording, processUserResponse])
+
+  /**
+   * End interview
    */
   const endInterview = useCallback(async () => {
-    setInterviewState('completed')
-    setIsRecording(false)
-    setIsProcessing(false)
+    setConversationState('completed')
 
-    // Stop media
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop())
     }
 
-    if (!session?.user?.email || !startTime) return
+    if (!session?.user?.email) return
 
     try {
-      // Save to Supabase
-      const interviewData: InterviewSession = {
+      const interviewData = {
         id: sessionId,
         userId: session.user.email,
         userEmail: session.user.email,
-        startTime,
-        endTime: new Date(),
+        startTime: startTime.toISOString(),
+        endTime: new Date().toISOString(),
         duration: Math.round((Date.now() - startTime.getTime()) / 1000),
         messages,
         status: 'completed',
         position,
-        company
+        company,
+        videoEnabled: isVideoEnabled
       }
 
       const response = await fetch('/api/interview/save', {
@@ -444,15 +409,14 @@ export default function VideoInterviewRealtime() {
 
       if (response.ok) {
         const data = await response.json()
-        // Redirect to feedback page
         router.push(`/interview/feedback?id=${data.interviewId}`)
       }
 
     } catch (err) {
       console.error('Save error:', err)
-      setError('Failed to save interview. Please try again.')
+      setError('Failed to save interview.')
     }
-  }, [session, sessionId, startTime, messages, position, company, router])
+  }, [session, sessionId, startTime, messages, position, company, isVideoEnabled, router])
 
   /**
    * Toggle video
@@ -471,14 +435,7 @@ export default function VideoInterviewRealtime() {
   }, [])
 
   /**
-   * Toggle mute
-   */
-  const toggleMute = useCallback(() => {
-    setIsMuted(prev => !prev)
-  }, [])
-
-  /**
-   * Cleanup on unmount
+   * Cleanup
    */
   useEffect(() => {
     return () => {
@@ -488,14 +445,14 @@ export default function VideoInterviewRealtime() {
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current)
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current)
       }
     }
   }, [])
 
   // Render setup screen
-  if (interviewState === 'setup') {
+  if (!interviewStarted) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <Card>
@@ -528,7 +485,15 @@ export default function VideoInterviewRealtime() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  This interview will use your camera and microphone. The AI will listen to your responses in real-time and ask follow-up questions.
+                  <strong>How it works:</strong>
+                  <ol className="list-decimal ml-4 mt-2 space-y-1">
+                    <li>AI asks a question and waits</li>
+                    <li>Click "Start Speaking" when ready</li>
+                    <li>Speak your answer</li>
+                    <li>Click "Stop Speaking" when done</li>
+                    <li>AI listens and responds to what you said</li>
+                    <li>Repeat for {maxQuestions} questions</li>
+                  </ol>
                 </AlertDescription>
               </Alert>
 
@@ -554,7 +519,7 @@ export default function VideoInterviewRealtime() {
   }
 
   // Render active interview
-  if (interviewState === 'active') {
+  if (conversationState !== 'completed') {
     return (
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -573,22 +538,28 @@ export default function VideoInterviewRealtime() {
                   
                   {/* Status Indicators */}
                   <div className="absolute top-4 left-4 flex gap-2">
-                    {isRecording && (
+                    {conversationState === 'ai_speaking' && (
+                      <Badge className="bg-green-600">
+                        <Volume2 className="h-3 w-3 mr-1 animate-pulse" />
+                        AI Speaking - Please Wait
+                      </Badge>
+                    )}
+                    {conversationState === 'waiting_for_user' && (
+                      <Badge className="bg-blue-600 animate-pulse">
+                        <Pause className="h-3 w-3 mr-1" />
+                        Your Turn - Click to Speak
+                      </Badge>
+                    )}
+                    {conversationState === 'user_speaking' && (
                       <Badge variant="destructive" className="animate-pulse">
                         <Mic className="h-3 w-3 mr-1" />
-                        Recording
+                        You're Speaking
                       </Badge>
                     )}
-                    {isProcessing && (
+                    {conversationState === 'processing' && (
                       <Badge variant="secondary">
                         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        Processing
-                      </Badge>
-                    )}
-                    {isSpeaking && (
-                      <Badge className="bg-green-600">
-                        <Volume2 className="h-3 w-3 mr-1" />
-                        AI Speaking
+                        Processing Your Response
                       </Badge>
                     )}
                   </div>
@@ -612,31 +583,48 @@ export default function VideoInterviewRealtime() {
                     {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
                   </Button>
 
-                  <Button
-                    variant={isMuted ? "danger" : "primary"}
-                    size="sm"
-                    onClick={toggleMute}
-                    className="w-12 h-12 p-0"
-                  >
-                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                  </Button>
+                  {conversationState === 'waiting_for_user' && (
+                    <Button
+                      variant="success"
+                      size="lg"
+                      onClick={handleUserStartSpeaking}
+                      className="flex-1"
+                    >
+                      <Mic className="h-5 w-5 mr-2" />
+                      Start Speaking
+                    </Button>
+                  )}
 
-                  <Button
-                    variant={isRecording ? "danger" : "primary"}
-                    size="sm"
-                    onClick={isRecording ? stopListening : startListening}
-                    disabled={isProcessing || isSpeaking}
-                    className="w-12 h-12 p-0"
-                  >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </Button>
+                  {conversationState === 'user_speaking' && (
+                    <Button
+                      variant="danger"
+                      size="lg"
+                      onClick={handleUserStopSpeaking}
+                      className="flex-1"
+                    >
+                      <MicOff className="h-5 w-5 mr-2" />
+                      Stop Speaking
+                    </Button>
+                  )}
+
+                  {(conversationState === 'ai_speaking' || conversationState === 'processing') && (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      disabled
+                      className="flex-1"
+                    >
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      {conversationState === 'ai_speaking' ? 'AI Speaking...' : 'Processing...'}
+                    </Button>
+                  )}
 
                   <Button
                     variant="danger"
                     onClick={endInterview}
                   >
                     <PhoneOff className="h-4 w-4 mr-2" />
-                    End Interview
+                    End
                   </Button>
                 </div>
 
@@ -690,28 +678,13 @@ export default function VideoInterviewRealtime() {
                       </div>
                     </div>
                   ))}
-
-                  {currentTranscript && (
-                    <div className="flex gap-3 flex-row-reverse">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gray-100">
-                        <User className="h-4 w-4 text-gray-600" />
-                      </div>
-                      <div className="flex-1 text-right">
-                        <div className="inline-block p-3 rounded-lg bg-gray-100 text-left">
-                          <p className="text-sm text-muted-foreground italic">
-                            {currentTranscript}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Interview Progress</CardTitle>
+                <CardTitle className="text-lg">Progress</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -721,14 +694,12 @@ export default function VideoInterviewRealtime() {
                   </div>
                   <Progress value={(questionCount / maxQuestions) * 100} />
                   
-                  {startTime && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        {Math.floor((Date.now() - startTime.getTime()) / 60000)} minutes
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4">
+                    <Clock className="h-4 w-4" />
+                    <span>
+                      {Math.floor((Date.now() - startTime.getTime()) / 60000)} minutes
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
