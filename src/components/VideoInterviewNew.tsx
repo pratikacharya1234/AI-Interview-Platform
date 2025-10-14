@@ -488,9 +488,9 @@ export default function VideoInterviewNew() {
                   <strong>How it works:</strong>
                   <ol className="list-decimal ml-4 mt-2 space-y-1">
                     <li>AI asks a question and waits</li>
-                    <li>Click "Start Speaking" when ready</li>
+                    <li>Click &quot;Start Speaking&quot; when ready</li>
                     <li>Speak your answer</li>
-                    <li>Click "Stop Speaking" when done</li>
+                    <li>Click &quot;Stop Speaking&quot; when done</li>
                     <li>AI listens and responds to what you said</li>
                     <li>Repeat for {maxQuestions} questions</li>
                   </ol>
@@ -553,7 +553,7 @@ export default function VideoInterviewNew() {
                     {conversationState === 'user_speaking' && (
                       <Badge variant="destructive" className="animate-pulse">
                         <Mic className="h-3 w-3 mr-1" />
-                        You're Speaking
+                        You&apos;re Speaking
                       </Badge>
                     )}
                     {conversationState === 'processing' && (
