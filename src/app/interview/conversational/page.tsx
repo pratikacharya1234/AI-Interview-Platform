@@ -1,24 +1,17 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import VideoInterview from '@/components/VideoInterview'
-import { PageHeader } from '@/components/navigation/breadcrumbs'
+import VideoInterviewRealtime from '@/components/VideoInterviewRealtime'
 
 export default function ConversationalInterviewPage() {
-  const router = useRouter()
-
-  const handleInterviewComplete = (interviewData: any) => {
-    console.log('Interview completed:', interviewData)
-    router.push(`/interview/feedback?id=${interviewData.id}`)
-  }
-
   return (
-    <>
-      <PageHeader 
-        title="AI Video Interview"
-        description="Experience a face-to-face interview with our advanced AI interviewer. Your camera and microphone create a realistic interview environment with real-time feedback."
-      />
-      <VideoInterview onComplete={handleInterviewComplete} />
-    </>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">AI Video Interview</h1>
+        <p className="text-muted-foreground">
+          Experience a face-to-face interview with our advanced AI interviewer. The AI listens to your responses in real-time and asks intelligent follow-up questions.
+        </p>
+      </div>
+      <VideoInterviewRealtime />
+    </div>
   )
 }

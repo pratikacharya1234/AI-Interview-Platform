@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 interface InterviewMessage {
   id: string
@@ -16,18 +21,18 @@ interface InterviewSession {
   endTime?: string
   duration: number
   messages: InterviewMessage[]
-  videoEnabled: boolean
+  videoEnabled?: boolean
   recordingUrl?: string
   feedback?: any
   userId?: string
   userEmail?: string
+  position?: string
+  company?: string
+  status?: string
   createdAt?: string
   updatedAt?: string
   metrics?: any
 }
-
-// In-memory storage for demo (replace with database in production)
-const interviewSessions: Map<string, InterviewSession> = new Map()
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,32 +55,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Add user ID to the interview data
-    const sessionWithUser = {
-      ...interviewData,
-      userEmail: session.user.email,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-
-    // Store interview session (replace with database operation)
-    interviewSessions.set(interviewData.id, sessionWithUser)
-
     // Calculate interview metrics
     const metrics = calculateInterviewMetrics(interviewData)
     
     // Generate AI feedback based on responses
     const feedback = await generateInterviewFeedback(interviewData.messages)
 
-    // Update session with metrics and feedback
-    const updatedSession = {
-      ...sessionWithUser,
-      metrics,
-      feedback,
-      updatedAt: new Date().toISOString()
-    }
+    // Save to Supabase
+    const { data, error } = await supabase
+      .from('interview_sessions')
+      .insert([{
+        id: interviewData.id,
+        user_email: session.user.email,
+        start_time: interviewData.startTime,
+        end_time: interviewData.endTime,
+        duration: interviewData.duration,
+        messages: interviewData.messages,
+        video_enabled: interviewData.videoEnabled || false,
+        recording_url: interviewData.recordingUrl,
+        position: interviewData.position || 'Software Developer',
+        company: interviewData.company || 'Tech Company',
+        status: interviewData.status || 'completed',
+        metrics: metrics,
+        feedback: feedback,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
 
-    interviewSessions.set(interviewData.id, updatedSession)
+    if (error) {
+      console.error('Supabase error:', error)
+      throw new Error(`Failed to save to database: ${error.message}`)
+    }
 
     console.log(`Interview saved: ${interviewData.id} for user: ${session.user.email}`)
 
@@ -111,41 +122,40 @@ export async function GET(request: NextRequest) {
     const interviewId = searchParams.get('id')
 
     if (interviewId) {
-      // Get specific interview session
-      const interviewSession = interviewSessions.get(interviewId)
+      // Get specific interview session from Supabase
+      const { data, error } = await supabase
+        .from('interview_sessions')
+        .select('*')
+        .eq('id', interviewId)
+        .eq('user_email', session.user.email)
+        .single()
       
-      if (!interviewSession) {
+      if (error || !data) {
         return NextResponse.json(
           { error: 'Interview session not found' },
           { status: 404 }
         )
       }
 
-      // Check if user owns this interview
-      if (interviewSession.userEmail !== session.user.email) {
-        return NextResponse.json(
-          { error: 'Access denied' },
-          { status: 403 }
-        )
+      return NextResponse.json({
+        success: true,
+        interview: data
+      })
+    } else {
+      // Get all interviews for the user from Supabase
+      const { data, error } = await supabase
+        .from('interview_sessions')
+        .select('*')
+        .eq('user_email', session.user.email)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new Error(`Failed to fetch interviews: ${error.message}`)
       }
 
       return NextResponse.json({
         success: true,
-        interview: interviewSession
-      })
-    } else {
-      // Get all interviews for the user
-      const userInterviews = Array.from(interviewSessions.values())
-        .filter(interviewSession => interviewSession.userEmail === session.user?.email)
-        .sort((a, b) => {
-          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
-          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
-          return bTime - aTime
-        })
-
-      return NextResponse.json({
-        success: true,
-        interviews: userInterviews
+        interviews: data || []
       })
     }
 

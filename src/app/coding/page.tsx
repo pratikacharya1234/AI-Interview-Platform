@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -219,21 +218,14 @@ export default function CodingPage() {
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Coding Challenges</h1>
-            <p className="text-muted-foreground">
-              Sharpen your programming skills with real-world coding problems
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button className="gap-2">
-              <Code className="h-4 w-4" />
-              Practice Mode
-            </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Coding Challenges</h1>
+          <p className="text-muted-foreground">
+            Sharpen your coding skills with curated algorithm and data structure problems
+          </p>
           </div>
         </div>
 
@@ -462,7 +454,6 @@ export default function CodingPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
-    </AppLayout>
+    </div>
   )
 }

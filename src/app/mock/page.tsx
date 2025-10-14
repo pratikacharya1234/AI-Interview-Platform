@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -279,16 +278,15 @@ export default function MockInterviewsPage() {
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Mock Interviews</h1>
-            <p className="text-muted-foreground">
-              Practice with realistic interview simulations from top tech companies
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Mock Interviews</h1>
+          <p className="text-muted-foreground">
+            Practice with realistic interview simulations from top tech companies
+          </p>
+        </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="gap-2">
               <Calendar className="h-4 w-4" />
@@ -572,7 +570,6 @@ export default function MockInterviewsPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
-    </AppLayout>
+    </div>
   )
 }

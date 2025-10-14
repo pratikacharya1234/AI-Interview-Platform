@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -241,31 +240,30 @@ export default function PreferencesPage() {
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Preferences</h1>
-            <p className="text-muted-foreground">
-              Customize your interview platform experience
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {hasChanges && (
-              <div className="flex items-center gap-2 text-sm text-orange-600">
-                <AlertTriangle className="h-4 w-4" />
-                Unsaved changes
-              </div>
-            )}
-            <Button
-              variant="outline"
-              onClick={resetPreferences}
-              className="gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset
-            </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Preferences</h1>
+          <p className="text-muted-foreground">
+            Customize your interview platform experience
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasChanges && (
+            <div className="flex items-center gap-2 text-sm text-orange-600">
+              <AlertTriangle className="h-4 w-4" />
+              Unsaved changes
+            </div>
+          )}
+          <Button
+            variant="outline"
+            onClick={resetPreferences}
+            className="gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset
+          </Button>
             <Button
               onClick={savePreferences}
               disabled={!hasChanges || saving}
@@ -819,7 +817,6 @@ export default function PreferencesPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </AppLayout>
+    </div>
   )
 }
