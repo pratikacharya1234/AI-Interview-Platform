@@ -54,6 +54,8 @@ export default function VideoInterviewNew() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const recognitionRef = useRef<any>(null)
+  const transcriptRef = useRef<string>('')
   
   // State
   const [conversationState, setConversationState] = useState<ConversationState>('ai_speaking')
@@ -160,7 +162,7 @@ export default function VideoInterviewNew() {
   }, [])
 
   /**
-   * Start recording user's response
+   * Start recording user's response with Web Speech API
    */
   const startRecording = useCallback(async () => {
     if (!mediaStreamRef.current) return
@@ -169,34 +171,75 @@ export default function VideoInterviewNew() {
       setConversationState('user_speaking')
       setError(null)
       audioChunksRef.current = []
+      transcriptRef.current = ''
 
-      // Create audio-only stream from the main stream
-      const audioTracks = mediaStreamRef.current.getAudioTracks()
-      if (audioTracks.length === 0) {
-        throw new Error('No audio track available')
-      }
-
-      const audioStream = new MediaStream(audioTracks)
-
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm'
-
-      const mediaRecorder = new MediaRecorder(audioStream, {
-        mimeType,
-        audioBitsPerSecond: 128000
-      })
-
-      mediaRecorderRef.current = mediaRecorder
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
+      // Try Web Speech API first (more reliable)
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition()
+        recognitionRef.current = recognition
+        
+        recognition.continuous = true
+        recognition.interimResults = true
+        recognition.lang = 'en-US'
+        
+        let finalTranscript = ''
+        
+        recognition.onresult = (event: any) => {
+          let interimTranscript = ''
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' '
+            } else {
+              interimTranscript += transcript
+            }
+          }
+          
+          transcriptRef.current = finalTranscript.trim()
+          console.log('📝 Transcript:', transcriptRef.current)
         }
-      }
+        
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error)
+          if (event.error !== 'no-speech') {
+            setError(`Speech recognition error: ${event.error}`)
+          }
+        }
+        
+        recognition.start()
+        console.log('🎤 User can speak now (Web Speech API)')
+      } else {
+        // Fallback to MediaRecorder
+        const audioTracks = mediaStreamRef.current.getAudioTracks()
+        if (audioTracks.length === 0) {
+          throw new Error('No audio track available')
+        }
 
-      mediaRecorder.start(100)
-      console.log('🎤 User can speak now')
+        const audioStream = new MediaStream(audioTracks)
+
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm'
+
+        const mediaRecorder = new MediaRecorder(audioStream, {
+          mimeType,
+          audioBitsPerSecond: 128000
+        })
+
+        mediaRecorderRef.current = mediaRecorder
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data)
+          }
+        }
+
+        mediaRecorder.start(100)
+        console.log('🎤 User can speak now (MediaRecorder)')
+      }
 
     } catch (err: any) {
       console.error('Recording error:', err)
@@ -208,6 +251,17 @@ export default function VideoInterviewNew() {
    * Stop recording
    */
   const stopRecording = useCallback(async (): Promise<Blob | null> => {
+    // Stop Web Speech API if active
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop()
+        recognitionRef.current = null
+      } catch (err) {
+        console.error('Error stopping recognition:', err)
+      }
+    }
+
+    // Stop MediaRecorder if active
     if (!mediaRecorderRef.current) return null
 
     return new Promise((resolve) => {
@@ -230,27 +284,31 @@ export default function VideoInterviewNew() {
   /**
    * Process user's audio and get AI response
    */
-  const processUserResponse = useCallback(async (audioBlob: Blob) => {
+  const processUserResponse = useCallback(async (audioBlob: Blob, transcript?: string) => {
     setConversationState('processing')
 
     try {
-      // 1. Transcribe user's audio
-      console.log('🎯 Transcribing user audio...')
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'recording.webm')
-      formData.append('language', 'en-US')
+      let userTranscript = transcript
 
-      const transcribeResponse = await fetch('/api/speech-to-text', {
-        method: 'POST',
-        body: formData
-      })
+      // If no transcript provided, try to transcribe
+      if (!userTranscript) {
+        console.log('🎯 Transcribing user audio...')
+        const formData = new FormData()
+        formData.append('audio', audioBlob, 'recording.webm')
+        formData.append('language', 'en-US')
 
-      if (!transcribeResponse.ok) {
-        throw new Error('Transcription failed')
+        const transcribeResponse = await fetch('/api/speech-to-text', {
+          method: 'POST',
+          body: formData
+        })
+
+        if (!transcribeResponse.ok) {
+          throw new Error('Transcription failed')
+        }
+
+        const transcribeData = await transcribeResponse.json()
+        userTranscript = transcribeData.transcript
       }
-
-      const transcribeData = await transcribeResponse.json()
-      const userTranscript = transcribeData.transcript
 
       if (!userTranscript || userTranscript.length < 3) {
         setError('No speech detected. Please try again.')
@@ -374,10 +432,14 @@ export default function VideoInterviewNew() {
   const handleUserStopSpeaking = useCallback(async () => {
     const audioBlob = await stopRecording()
     
-    if (audioBlob && audioBlob.size > 1000) {
+    // Use Web Speech API transcript if available
+    if (transcriptRef.current && transcriptRef.current.length > 3) {
+      await processUserResponse(audioBlob || new Blob(), transcriptRef.current)
+    } else if (audioBlob && audioBlob.size > 1000) {
+      // Fallback to audio transcription
       await processUserResponse(audioBlob)
     } else {
-      setError('Recording too short. Please speak longer.')
+      setError('No speech detected. Please try again.')
       setConversationState('waiting_for_user')
     }
   }, [stopRecording, processUserResponse])
