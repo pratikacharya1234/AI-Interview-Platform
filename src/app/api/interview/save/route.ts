@@ -61,6 +61,28 @@ export async function POST(request: NextRequest) {
     // Generate AI feedback based on responses
     const feedback = await generateInterviewFeedback(interviewData.messages)
 
+    // Generate feedback image
+    let feedbackImageUrl = null
+    try {
+      const imageResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/generate-feedback-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback,
+          metrics,
+          interviewId: interviewData.id
+        })
+      })
+
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json()
+        feedbackImageUrl = imageData.imageUrl
+      }
+    } catch (imageError) {
+      console.error('Failed to generate feedback image:', imageError)
+      // Continue without image if generation fails
+    }
+
     // Save to Supabase
     const { data, error } = await supabase
       .from('interview_sessions')
@@ -78,6 +100,7 @@ export async function POST(request: NextRequest) {
         status: interviewData.status || 'completed',
         metrics: metrics,
         feedback: feedback,
+        feedback_image_url: feedbackImageUrl,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }])
@@ -95,6 +118,7 @@ export async function POST(request: NextRequest) {
       interviewId: interviewData.id,
       metrics,
       feedback,
+      feedbackImageUrl,
       message: 'Interview session saved successfully'
     })
 

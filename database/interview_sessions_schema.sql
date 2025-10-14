@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
   status VARCHAR(50) DEFAULT 'completed' CHECK (status IN ('active', 'completed', 'cancelled')),
   metrics JSONB DEFAULT '{}'::jsonb, -- Interview performance metrics
   feedback JSONB DEFAULT '{}'::jsonb, -- AI-generated feedback
+  feedback_image_url TEXT, -- Generated feedback image (SVG data URL)
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

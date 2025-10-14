@@ -290,28 +290,17 @@ export default function VideoInterviewNew() {
     try {
       let userTranscript = transcript
 
-      // If no transcript provided, try to transcribe
+      // Web Speech API should always provide transcript
+      // This fallback should rarely be needed
       if (!userTranscript) {
-        console.log('🎯 Transcribing user audio...')
-        const formData = new FormData()
-        formData.append('audio', audioBlob, 'recording.webm')
-        formData.append('language', 'en-US')
-
-        const transcribeResponse = await fetch('/api/speech-to-text', {
-          method: 'POST',
-          body: formData
-        })
-
-        if (!transcribeResponse.ok) {
-          throw new Error('Transcription failed')
-        }
-
-        const transcribeData = await transcribeResponse.json()
-        userTranscript = transcribeData.transcript
+        console.warn('⚠️ No transcript provided. Web Speech API should have captured it.')
+        setError('No speech detected. Please try speaking again.')
+        setConversationState('waiting_for_user')
+        return
       }
 
-      if (!userTranscript || userTranscript.length < 3) {
-        setError('No speech detected. Please try again.')
+      if (userTranscript.length < 3) {
+        setError('Speech too short. Please provide a longer response.')
         setConversationState('waiting_for_user')
         return
       }

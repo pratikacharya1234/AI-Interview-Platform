@@ -23,16 +23,20 @@ import {
 
 interface InterviewSession {
   id: string
-  startTime: string
-  endTime?: string
+  start_time: string
+  end_time?: string
   duration: number
   messages: any[]
-  videoEnabled: boolean
-  recordingUrl?: string
+  video_enabled: boolean
+  recording_url?: string
+  position?: string
+  company?: string
+  status?: string
   feedback?: any
   metrics?: any
-  createdAt?: string
-  updatedAt?: string
+  feedback_image_url?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export default function HistoryClient() {
@@ -169,7 +173,7 @@ export default function HistoryClient() {
                       Interview Session
                     </CardTitle>
                     <CardDescription>
-                      {interview.createdAt ? formatDate(interview.createdAt) : formatDate(interview.startTime)}
+                      {interview.created_at ? formatDate(interview.created_at) : formatDate(interview.start_time)}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -212,7 +216,7 @@ export default function HistoryClient() {
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-gray-500" />
                     <span className="text-sm">
-                      Video: {interview.videoEnabled ? 'Enabled' : 'Disabled'}
+                      Video: {interview.video_enabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
                 </div>
@@ -237,6 +241,18 @@ export default function HistoryClient() {
                         )
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Feedback Image */}
+                {interview.feedback_image_url && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium mb-2">Performance Report</h4>
+                    <img 
+                      src={interview.feedback_image_url} 
+                      alt="Feedback Report" 
+                      className="w-full rounded-lg border shadow-sm"
+                    />
                   </div>
                 )}
 

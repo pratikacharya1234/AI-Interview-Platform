@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
 /**
- * Speech-to-Text API using Google's Gemini AI
- * Converts audio to text with high accuracy
+ * Speech-to-Text API Fallback
+ * Note: This endpoint is a fallback. The primary transcription happens
+ * client-side using Web Speech API for better reliability and speed.
+ * 
+ * This endpoint returns a helpful message directing to use Web Speech API.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -18,67 +20,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+    console.log('⚠️ Server-side transcription called. Web Speech API should be used instead.')
 
-    if (!GEMINI_API_KEY) {
-      return NextResponse.json(
-        { error: 'Gemini API key not configured' },
-        { status: 500 }
-      )
-    }
-
-    // Convert audio file to base64
-    const arrayBuffer = await audioFile.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const base64Audio = buffer.toString('base64')
-
-    // Initialize Gemini
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-
-    // Use Gemini's multimodal capabilities to transcribe audio
-    const prompt = `Transcribe the following audio accurately. Only return the transcribed text, nothing else. If the audio is unclear or contains no speech, return "No speech detected".`
-
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType: audioFile.type || 'audio/webm',
-          data: base64Audio
-        }
-      }
-    ])
-
-    const response = await result.response
-    const transcript = response.text().trim()
-
-    // Check if transcription was successful
-    if (!transcript || transcript === 'No speech detected') {
-      return NextResponse.json({
-        transcript: '',
-        confidence: 0,
-        language: language,
-        warning: 'No speech detected in audio'
-      })
-    }
-
+    // Return a message indicating Web Speech API should be used
+    // This is a fallback that shouldn't normally be reached
     return NextResponse.json({
-      transcript: transcript,
-      confidence: 0.95, // Gemini doesn't provide confidence scores
+      transcript: '',
+      confidence: 0,
       language: language,
-      duration: audioFile.size / 16000, // Approximate duration
-      timestamp: new Date().toISOString()
-    })
+      warning: 'Server-side transcription not available. Please use Web Speech API on the client.',
+      useClientSideTranscription: true
+    }, { status: 200 })
 
   } catch (error: any) {
     console.error('Speech-to-text error:', error)
     
     return NextResponse.json(
       { 
-        error: 'Speech-to-text conversion failed',
-        details: error.message 
+        transcript: '',
+        confidence: 0,
+        warning: 'Server-side transcription not available. Please use Web Speech API on the client.',
+        useClientSideTranscription: true
       },
-      { status: 500 }
+      { status: 200 }
     )
   }
 }
