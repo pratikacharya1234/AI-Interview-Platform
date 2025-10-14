@@ -1,43 +1,78 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 
 interface AIFeatureMetrics {
-  sessionsCompleted: number
-  averageScore: number
-  improvementRate: number
-  lastActivity: string | null
+  coaching_sessions_completed: number
+  voice_sessions_completed: number
+  feedback_sessions_completed: number
+  prep_plans_active: number
+  average_score: number
+  improvement_rate: number
+  last_activity: string | null
 }
 
 interface AIFeaturesContextType {
   metrics: AIFeatureMetrics
-  updateMetrics: (newMetrics: Partial<AIFeatureMetrics>) => void
+  refreshMetrics: () => Promise<void>
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
+  error: string | null
 }
 
 const AIFeaturesContext = createContext<AIFeaturesContextType | undefined>(undefined)
 
 export function AIFeaturesProvider({ children }: { children: ReactNode }) {
+  const { data: session } = useSession()
   const [metrics, setMetrics] = useState<AIFeatureMetrics>({
-    sessionsCompleted: 0,
-    averageScore: 0,
-    improvementRate: 0,
-    lastActivity: null
+    coaching_sessions_completed: 0,
+    voice_sessions_completed: 0,
+    feedback_sessions_completed: 0,
+    prep_plans_active: 0,
+    average_score: 0,
+    improvement_rate: 0,
+    last_activity: null
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const updateMetrics = useCallback((newMetrics: Partial<AIFeatureMetrics>) => {
-    setMetrics(prev => ({ ...prev, ...newMetrics }))
-  }, [])
+  const refreshMetrics = useCallback(async () => {
+    if (!session?.user?.email) return
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ai/metrics')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch metrics')
+      }
+
+      const data = await response.json()
+      setMetrics(data)
+    } catch (err: any) {
+      console.error('Error fetching AI features metrics:', err)
+      setError(err.message || 'Failed to load metrics')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [session?.user?.email])
+
+  // Load metrics on mount and when session changes
+  useEffect(() => {
+    refreshMetrics()
+  }, [refreshMetrics])
 
   return (
     <AIFeaturesContext.Provider
       value={{
         metrics,
-        updateMetrics,
+        refreshMetrics,
         isLoading,
-        setIsLoading
+        setIsLoading,
+        error
       }}
     >
       {children}
