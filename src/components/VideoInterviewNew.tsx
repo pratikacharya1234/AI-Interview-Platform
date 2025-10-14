@@ -170,11 +170,19 @@ export default function VideoInterviewNew() {
       setError(null)
       audioChunksRef.current = []
 
+      // Create audio-only stream from the main stream
+      const audioTracks = mediaStreamRef.current.getAudioTracks()
+      if (audioTracks.length === 0) {
+        throw new Error('No audio track available')
+      }
+
+      const audioStream = new MediaStream(audioTracks)
+
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : 'audio/webm'
 
-      const mediaRecorder = new MediaRecorder(mediaStreamRef.current, {
+      const mediaRecorder = new MediaRecorder(audioStream, {
         mimeType,
         audioBitsPerSecond: 128000
       })
