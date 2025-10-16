@@ -146,7 +146,7 @@ export default function LearningPathsPage() {
 
                   <Button 
                     className="w-full" 
-                    variant={path.status === 'completed' ? 'outline' : 'default'}
+                    variant={path.status === 'completed' ? 'outline' : undefined}
                     onClick={() => router.push(`/learning/paths/${path.id}`)}
                   >
                     {path.status === 'completed' ? (
