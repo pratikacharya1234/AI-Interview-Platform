@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +24,8 @@ import {
   User,
   Briefcase,
   Code,
-  MessageSquare
+  MessageSquare,
+  Loader2
 } from 'lucide-react'
 
 interface MockInterview {
@@ -45,7 +47,58 @@ interface MockInterview {
   tags: string[]
 }
 
-const mockInterviews: MockInterview[] = [
+const generateMockInterviewsFromCompanies = async (): Promise<MockInterview[]> => {
+  try {
+    const response = await fetch('/api/company')
+    if (!response.ok) return []
+    
+    const companies = await response.json()
+    
+    return companies.flatMap((company: any) => [
+      {
+        id: `${company.company_name.toLowerCase()}-technical`,
+        title: `${company.company_name} Technical Interview`,
+        description: `Technical interview simulation for ${company.company_name} focusing on their tech stack and coding standards.`,
+        company: company.company_name,
+        position: 'Software Engineer',
+        duration: 45,
+        difficulty: company.difficulty_rating > 7 ? 'Advanced' : company.difficulty_rating > 4 ? 'Intermediate' : 'Beginner',
+        type: 'Technical',
+        status: 'Available',
+        rating: null,
+        feedback: null,
+        scheduledDate: null,
+        completedDate: null,
+        participants: 1,
+        questions: 3,
+        tags: company.tech_stack?.slice(0, 3) || ['Coding', 'Algorithms']
+      },
+      {
+        id: `${company.company_name.toLowerCase()}-behavioral`,
+        title: `${company.company_name} Behavioral Interview`,
+        description: `Behavioral interview focusing on ${company.company_name} culture and values.`,
+        company: company.company_name,
+        position: 'Software Engineer',
+        duration: 30,
+        difficulty: 'Intermediate',
+        type: 'Behavioral',
+        status: 'Available',
+        rating: null,
+        feedback: null,
+        scheduledDate: null,
+        completedDate: null,
+        participants: 1,
+        questions: 5,
+        tags: company.culture_values?.slice(0, 2) || ['Culture Fit', 'Communication']
+      }
+    ])
+  } catch (error) {
+    console.error('Error generating interviews:', error)
+    return []
+  }
+}
+
+const defaultInterviews: MockInterview[] = [
   {
     id: 'google-swe-l3',
     title: 'Google Software Engineer L3',
@@ -162,14 +215,29 @@ const types = ['All', 'Technical', 'Behavioral', 'System Design', 'Case Study']
 const statuses = ['All', 'Available', 'Scheduled', 'Completed']
 
 export default function MockInterviewsPage() {
-  const [interviews, setInterviews] = useState<MockInterview[]>(mockInterviews)
-  const [filteredInterviews, setFilteredInterviews] = useState<MockInterview[]>(mockInterviews)
+  const router = useRouter()
+  const [interviews, setInterviews] = useState<MockInterview[]>([])
+  const [filteredInterviews, setFilteredInterviews] = useState<MockInterview[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCompany, setSelectedCompany] = useState('All')
   const [selectedDifficulty, setSelectedDifficulty] = useState('All')
   const [selectedType, setSelectedType] = useState('All')
   const [selectedStatus, setSelectedStatus] = useState('All')
   const [activeTab, setActiveTab] = useState('all')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadInterviews()
+  }, [])
+
+  const loadInterviews = async () => {
+    setLoading(true)
+    const generated = await generateMockInterviewsFromCompanies()
+    const allInterviews = generated.length > 0 ? generated : defaultInterviews
+    setInterviews(allInterviews)
+    setFilteredInterviews(allInterviews)
+    setLoading(false)
+  }
 
   // Filter interviews based on search and filters
   useEffect(() => {
@@ -275,6 +343,14 @@ export default function MockInterviewsPage() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (

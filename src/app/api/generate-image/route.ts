@@ -10,9 +10,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
-    console.log('🎨 HACKATHON: Generating image with prompt:', prompt)
+    console.log('Generating image with prompt:', prompt)
 
-    // HACKATHON: Try Runware API with fallback
+    // Try Runware API with fallback
     try {
       const response = await fetch('https://api.runware.ai/v1/images/generations', {
         method: 'POST',
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
       const data = await response.json()
       
-      console.log('✅ HACKATHON: Image generated successfully!')
+      console.log('Image generated successfully!')
       
       return NextResponse.json({ 
         success: true,
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       })
       
     } catch (runwareError) {
-      console.log('🎨 HACKATHON: Using fallback placeholder image')
+      console.log('Using fallback placeholder image')
       
       // Return a placeholder image URL for demo purposes
       const placeholderUrl = `https://via.placeholder.com/512x512/4F46E5/FFFFFF?text=${encodeURIComponent('Interview Summary')}`
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('🚨 HACKATHON: Image generation error:', error)
+    console.error('Image generation error:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

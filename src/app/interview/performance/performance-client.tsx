@@ -89,16 +89,15 @@ export default function PerformanceClient() {
     setIsLoading(true)
     
     try {
-      // Temporarily disabled for NextAuth migration
-      // const supabase = createClient()
+      const response = await fetch(`/api/analytics?action=summary&timeRange=${timeRange}`)
       
-      // Fetch performance data (using mock data for now)
-      // Temporarily using mock data instead of Supabase
-      const interviews: any[] = [] // Mock empty data for now
-      const error = null
+      if (!response.ok) {
+        throw new Error('Failed to fetch performance data')
+      }
 
-      if (!interviews || interviews.length === 0) {
-        // No data available - set empty state
+      const data = await response.json()
+
+      if (!data || !data.total_interviews || data.total_interviews === 0) {
         setPerformanceData({
           overall_score: 0,
           trend: 'stable',
@@ -112,48 +111,15 @@ export default function PerformanceClient() {
         return
       }
 
-      // Calculate performance metrics from real data
-      const totalScore = interviews.reduce((sum: number, interview: Interview) => sum + (interview.performance_score || 0), 0)
-      const avgScore = totalScore / interviews.length
-
-      // Group by skills/interview types
-      const skillsMap = new Map()
-      interviews.forEach((interview: Interview) => {
-        const interviewType = interview.type || 'general'
-        if (!skillsMap.has(interviewType)) {
-          skillsMap.set(interviewType, { scores: [], count: 0 })
-        }
-        skillsMap.get(interviewType).scores.push(interview.performance_score || 0)
-        skillsMap.get(interviewType).count++
-      })
-
-      const skills = Array.from(skillsMap.entries()).map(([name, data]) => ({
-        name: name.charAt(0).toUpperCase() + name.slice(1),
-        score: data.scores.reduce((sum: number, score: number) => sum + score, 0) / data.scores.length,
-        improvement: 0, // Would need historical data to calculate
-        category: ['technical', 'coding', 'algorithms'].includes(name) ? 'Technical' : 'Behavioral',
-        sessions_count: data.count
-      }))
-
-      const recent_sessions = interviews.map((interview: Interview) => ({
-        id: interview.id,
-        date: interview.created_at,
-        score: interview.performance_score || 0,
-        type: interview.type || 'General',
-        duration: interview.duration_minutes || 0,
-        improvement: 0 // Would need historical comparison
-      }))
-
+      // Use data from analytics API
       setPerformanceData({
-        overall_score: Number(avgScore.toFixed(1)),
-        trend: 'stable', // Would need historical data to determine trend
-        skills,
-        recent_sessions,
-        strengths: [],
-        weaknesses: [],
-        recommendations: skills.length > 0 
-          ? ['Continue practicing to improve your interview skills']
-          : ['Complete your first interview to get personalized recommendations']
+        overall_score: data.average_score || 0,
+        trend: data.trend || 'stable',
+        skills: data.skill_breakdown || [],
+        recent_sessions: data.recent_interviews || [],
+        strengths: data.strengths || [],
+        weaknesses: data.weaknesses || [],
+        recommendations: data.recommendations || ['Continue practicing to improve your interview skills']
       })
     } catch (error) {
       console.error('Error loading performance data:', error)
