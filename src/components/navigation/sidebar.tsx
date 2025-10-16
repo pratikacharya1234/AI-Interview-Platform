@@ -29,7 +29,14 @@ import {
   Zap,
   Shield,
   Headphones,
-  Monitor
+  Monitor,
+  Users,
+  Building2,
+  GraduationCap,
+  Trophy,
+  Flame,
+  Map,
+  UserCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -74,6 +81,20 @@ const navigationItems: SidebarItem[] = [
         icon: Mic,
       },
       {
+        id: 'persona-interviews',
+        name: 'Multi-Persona Interviews',
+        href: '/interview/persona',
+        icon: Users,
+        badge: 'New',
+      },
+      {
+        id: 'company-simulations',
+        name: 'Company Simulations',
+        href: '/interview/company',
+        icon: Building2,
+        badge: 'New',
+      },
+      {
         id: 'interview-history',
         name: 'Interview History',
         href: '/interview/history',
@@ -88,22 +109,11 @@ const navigationItems: SidebarItem[] = [
     ]
   },
   {
-    id: 'performance',
-    name: 'Performance',
-    icon: TrendingUp,
+    id: 'gamification',
+    name: 'Gamification',
+    icon: Trophy,
+    badge: 'New',
     children: [
-      {
-        id: 'analytics',
-        name: 'Analytics Dashboard',
-        href: '/analytics',
-        icon: BarChart3,
-      },
-      {
-        id: 'progress',
-        name: 'Progress Tracking',
-        href: '/interview/performance',
-        icon: Target,
-      },
       {
         id: 'achievements',
         name: 'Achievements',
@@ -111,18 +121,43 @@ const navigationItems: SidebarItem[] = [
         icon: Award,
       },
       {
-        id: 'reports',
-        name: 'Performance Reports',
-        href: '/reports',
-        icon: FileText,
+        id: 'leaderboard',
+        name: 'Leaderboard',
+        href: '/leaderboard',
+        icon: Trophy,
+      },
+      {
+        id: 'streak',
+        name: 'Daily Streak',
+        href: '/streak',
+        icon: Flame,
+      },
+      {
+        id: 'xp-progress',
+        name: 'XP & Levels',
+        href: '/progress',
+        icon: TrendingUp,
       },
     ]
   },
   {
     id: 'learning',
-    name: 'Learning Center',
-    icon: BookOpen,
+    name: 'Learning Paths',
+    icon: Map,
+    badge: 'New',
     children: [
+      {
+        id: 'my-paths',
+        name: 'My Learning Paths',
+        href: '/learning/paths',
+        icon: Map,
+      },
+      {
+        id: 'skill-assessment',
+        name: 'Skill Assessment',
+        href: '/learning/skills',
+        icon: Target,
+      },
       {
         id: 'resources',
         name: 'Study Resources',
@@ -141,11 +176,63 @@ const navigationItems: SidebarItem[] = [
         href: '/coding',
         icon: Code,
       },
+    ]
+  },
+  {
+    id: 'performance',
+    name: 'Analytics',
+    icon: BarChart3,
+    children: [
       {
-        id: 'mock-interviews',
-        name: 'Mock Interviews',
-        href: '/mock',
-        icon: Monitor,
+        id: 'analytics-dashboard',
+        name: 'Performance Dashboard',
+        href: '/analytics',
+        icon: BarChart3,
+      },
+      {
+        id: 'voice-analysis',
+        name: 'Voice Analysis',
+        href: '/analytics/voice',
+        icon: Mic,
+        badge: 'New',
+      },
+      {
+        id: 'progress-tracking',
+        name: 'Progress Tracking',
+        href: '/interview/performance',
+        icon: TrendingUp,
+      },
+      {
+        id: 'reports',
+        name: 'Performance Reports',
+        href: '/reports',
+        icon: FileText,
+      },
+    ]
+  },
+  {
+    id: 'mentor',
+    name: 'Mentorship',
+    icon: GraduationCap,
+    badge: 'New',
+    children: [
+      {
+        id: 'find-mentors',
+        name: 'Find Mentors',
+        href: '/mentor/find',
+        icon: Users,
+      },
+      {
+        id: 'my-mentors',
+        name: 'My Mentors',
+        href: '/mentor/my-mentors',
+        icon: UserCircle,
+      },
+      {
+        id: 'mentor-feedback',
+        name: 'Mentor Feedback',
+        href: '/mentor/feedback',
+        icon: Star,
       },
     ]
   },
@@ -154,7 +241,6 @@ const navigationItems: SidebarItem[] = [
     name: 'AI Features',
     href: '/ai/coach',
     icon: Zap,
-    badge: 'New',
   },
   {
     id: 'account',

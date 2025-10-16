@@ -65,19 +65,27 @@ class AdaptiveLearningService {
   }
 
   private async identifyWeakAreas(userId: string): Promise<string[]> {
+    const { data: sessions } = await supabase
+      .from('interview_sessions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .limit(10)
+
+    if (!sessions || sessions.length === 0) return []
+
+    const sessionIds = sessions.map(s => s.id)
+
     const { data: evaluations } = await supabase
       .from('interview_evaluations')
       .select('weaknesses')
-      .in('session_id',
-        supabase.from('interview_sessions').select('id').eq('user_id', userId)
-      )
-      .limit(10)
+      .in('session_id', sessionIds)
 
     if (!evaluations) return []
 
     const weaknessMap: Record<string, number> = {}
-    evaluations.forEach(eval => {
-      const weaknesses = eval.weaknesses || []
+    evaluations.forEach(evaluation => {
+      const weaknesses = evaluation.weaknesses || []
       weaknesses.forEach((weakness: string) => {
         weaknessMap[weakness] = (weaknessMap[weakness] || 0) + 1
       })
