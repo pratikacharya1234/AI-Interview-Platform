@@ -229,13 +229,20 @@ class GamificationService {
     }
 
     if (criteria.perfect_scores) {
+      const { data: userSessions } = await supabase
+        .from('interview_sessions')
+        .select('id')
+        .eq('user_id', userId)
+
+      if (!userSessions || userSessions.length === 0) return false
+
+      const sessionIds = userSessions.map(s => s.id)
+
       const { count } = await supabase
         .from('interview_evaluations')
         .select('id', { count: 'exact', head: true })
         .eq('overall_score', 100)
-        .in('session_id', 
-          supabase.from('interview_sessions').select('id').eq('user_id', userId)
-        )
+        .in('session_id', sessionIds)
 
       if ((count || 0) < criteria.perfect_scores) return false
     }
@@ -263,13 +270,20 @@ class GamificationService {
     }
 
     if (criteria.high_communication_scores) {
+      const { data: userSessions } = await supabase
+        .from('interview_sessions')
+        .select('id')
+        .eq('user_id', userId)
+
+      if (!userSessions || userSessions.length === 0) return false
+
+      const sessionIds = userSessions.map(s => s.id)
+
       const { count } = await supabase
         .from('interview_evaluations')
         .select('id', { count: 'exact', head: true })
         .gte('communication_score', 90)
-        .in('session_id',
-          supabase.from('interview_sessions').select('id').eq('user_id', userId)
-        )
+        .in('session_id', sessionIds)
 
       if ((count || 0) < criteria.high_communication_scores) return false
     }
