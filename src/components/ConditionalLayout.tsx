@@ -27,7 +27,16 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
                          pathname.startsWith('/mock') ||
                          pathname.startsWith('/achievements') ||
                          pathname.startsWith('/reports') ||
-                         pathname.startsWith('/preferences')
+                         pathname.startsWith('/preferences') ||
+                         pathname.startsWith('/leaderboard') ||
+                         pathname.startsWith('/streak') ||
+                         pathname.startsWith('/progress') ||
+                         pathname.startsWith('/learning') ||
+                         pathname.startsWith('/mentor') ||
+                         pathname.startsWith('/resources') ||
+                         pathname.startsWith('/help') ||
+                         pathname.startsWith('/tutorials') ||
+                         pathname.startsWith('/contact')
   
   if (isLandingPage) {
     // Landing page - no layout wrapper, just preferences context
