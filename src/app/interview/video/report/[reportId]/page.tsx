@@ -102,7 +102,7 @@ export default function VideoInterviewReportPage({ params }: { params: { reportI
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h2 className="text-xl font-semibold mb-2">Report Not Found</h2>
             <p className="text-muted-foreground mb-4">
-              The interview report you're looking for doesn't exist.
+              The interview report you&apos;re looking for doesn&apos;t exist.
             </p>
             <Button onClick={() => router.push('/interview')}>
               Back to Interviews
