@@ -401,7 +401,7 @@ class VoiceAnalysisService {
     areas_improved: string[]
     areas_declined: string[]
   }> {
-    const { data: currentSession } = await this.getSessionVoiceAnalytics(sessionId)
+    const currentSession = await this.getSessionVoiceAnalytics(sessionId)
 
     const { data: userSessions } = await supabase
       .from('interview_sessions')
@@ -413,7 +413,7 @@ class VoiceAnalysisService {
 
     if (!userSessions || userSessions.length === 0) {
       return {
-        current_session: currentSession?.summary,
+        current_session: currentSession.summary,
         historical_average: null,
         improvement_percentage: 0,
         areas_improved: [],
@@ -431,7 +431,7 @@ class VoiceAnalysisService {
       pace: historicalAnalyses.reduce((sum, a) => sum + a.summary.average_speech_pace, 0) / historicalAnalyses.length
     }
 
-    const current = currentSession?.summary
+    const current = currentSession.summary
     const improvementPct = ((current.average_confidence - historicalAvg.confidence) / historicalAvg.confidence) * 100
 
     const areasImproved: string[] = []
