@@ -176,7 +176,7 @@ export default function ModernDashboard() {
             Welcome back, {session?.user?.name || 'User'}
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            You're on a {stats.currentStreak} day streak. Keep it up!
+            You&apos;re on a {stats.currentStreak} day streak. Keep it up!
           </p>
         </div>
         <Link
