@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { PageHeader } from '@/components/navigation/breadcrumbs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -115,11 +114,14 @@ export default function ReportsPage() {
     : reports.filter(report => report.type === selectedType)
 
   return (
-    <>
-      <PageHeader 
-        title="Performance Reports"
-        description="Generate and download comprehensive reports on your interview performance and skill development."
-      >
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Performance Reports</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Generate and download comprehensive reports on your interview performance and skill development.
+          </p>
+        </div>
         <div className="flex items-center space-x-2">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-40">
@@ -141,9 +143,7 @@ export default function ReportsPage() {
             Generate Report
           </Button>
         </div>
-      </PageHeader>
-
-      <div className="space-y-6">
+      </div>
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {performanceMetrics.map((metric) => (
@@ -371,7 +371,6 @@ export default function ReportsPage() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-    </>
+    </div>
   )
 }

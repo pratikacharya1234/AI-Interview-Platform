@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { ConditionalLayout } from '@/components/ConditionalLayout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Providers } from '@/components/providers'
+import { ThemeProvider } from '@/components/providers/theme-provider'
 import StorageCleanup from '@/components/StorageCleanup'
 import './globals.css'
 
@@ -100,7 +101,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -141,13 +142,20 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <StorageCleanup />
-        <Providers>
-          <ErrorBoundary>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-          </ErrorBoundary>
-        </Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Providers>
+            <ErrorBoundary>
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
+            </ErrorBoundary>
+          </Providers>
+        </ThemeProvider>
         
         {/* Performance monitoring script placeholder */}
         {process.env.NODE_ENV === 'production' && (

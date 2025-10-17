@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { AppLayout as AuthenticatedLayout } from '@/components/layout/app-layout'
+import { ModernLayout } from '@/components/layout/modern-layout'
 import { PreferencesProvider } from '@/contexts/PreferencesContext'
 
 interface ConditionalLayoutProps {
@@ -13,6 +13,12 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   
   // Landing page gets no layout wrapper (it has its own navigation)
   const isLandingPage = pathname === '/'
+  
+  // Auth pages get minimal layout
+  const isAuthPage = pathname.startsWith('/auth/') || 
+                     pathname.startsWith('/login') ||
+                     pathname.startsWith('/register') ||
+                     pathname.startsWith('/forgot-password')
   
   // Protected pages that need authentication and dashboard layout
   const isProtectedPage = pathname.startsWith('/dashboard') || 
@@ -50,18 +56,29 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
     )
   }
   
-  if (isProtectedPage) {
-    // Protected pages - use authenticated layout with sidebar and navbar
+  if (isAuthPage) {
+    // Auth pages - minimal layout
     return (
       <PreferencesProvider>
-        <AuthenticatedLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
           {children}
-        </AuthenticatedLayout>
+        </div>
       </PreferencesProvider>
     )
   }
   
-  // Default layout for other pages (if any)
+  if (isProtectedPage) {
+    // Protected pages - use modern layout with sidebar and navbar
+    return (
+      <PreferencesProvider>
+        <ModernLayout>
+          {children}
+        </ModernLayout>
+      </PreferencesProvider>
+    )
+  }
+  
+  // Default layout for other pages
   return (
     <PreferencesProvider>
       <div className="min-h-screen">

@@ -18,7 +18,6 @@ import {
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { PageHeader } from '@/components/navigation/breadcrumbs'
 import { useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 
@@ -49,12 +48,14 @@ export default function InterviewPage() {
 
   const user = session?.user
   return (
-    <>
-      <PageHeader 
-        title="Choose Your Interview Experience"
-        description="Practice with our advanced AI interviewer using cutting-edge technology. Get ready for your next opportunity with personalized feedback and real-time analysis."
-      />
-      <div className="space-y-8">        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Choose Your Interview Experience</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Practice with our advanced AI interviewer using cutting-edge technology. Get ready for your next opportunity with personalized feedback and real-time analysis.
+        </p>
+      </div>
+      <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Conversational AI Interview */}
           <Card className="relative overflow-hidden border-2 border-blue-200 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="absolute top-4 right-4">
@@ -204,7 +205,7 @@ export default function InterviewPage() {
                     <td className="px-6 py-4 text-sm text-gray-900">Voice Interaction</td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Full Support
+                        Full Support
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -217,7 +218,7 @@ export default function InterviewPage() {
                     <td className="px-6 py-4 text-sm text-gray-900">AI-Generated Images</td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Leonardo AI
+                        Leonardo AI
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -230,7 +231,7 @@ export default function InterviewPage() {
                     <td className="px-6 py-4 text-sm text-gray-900">Natural Speech</td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ ElevenLabs
+                        ElevenLabs
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -243,12 +244,12 @@ export default function InterviewPage() {
                     <td className="px-6 py-4 text-sm text-gray-900">Real-time Analysis</td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Live Processing
+                        Live Processing
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        ✓ Post-Submit
+                        Post-Submit
                       </span>
                     </td>
                   </tr>
@@ -256,12 +257,12 @@ export default function InterviewPage() {
                     <td className="px-6 py-4 text-sm text-gray-900">Detailed Feedback</td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Comprehensive
+                        Comprehensive
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Detailed
+                        Detailed
                       </span>
                     </td>
                   </tr>
@@ -271,6 +272,5 @@ export default function InterviewPage() {
           </div>
         </div>
       </div>
-    </>
   )
 }

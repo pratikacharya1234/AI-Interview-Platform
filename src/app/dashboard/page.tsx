@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import DashboardClient from './dashboard-client'
+import ModernDashboard from './modern-dashboard'
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -10,7 +10,5 @@ export default function DashboardPage() {
     return null
   }
 
-  return (
-    <DashboardClient user={session.user} />
-  )
+  return <ModernDashboard />
 }

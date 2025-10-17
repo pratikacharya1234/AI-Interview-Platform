@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { PageHeader } from '@/components/navigation/breadcrumbs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -82,18 +81,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <>
-      <PageHeader 
-        title="Settings"
-        description="Customize your AI interview experience and manage your account preferences."
-      >
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Customize your AI interview experience and manage your account preferences.
+          </p>
+        </div>
         {hasUnsavedChanges && (
           <Button onClick={handleSaveAll} disabled={isSaving}>
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
         )}
-      </PageHeader>
+      </div>
 
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
@@ -513,6 +515,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   )
 }
