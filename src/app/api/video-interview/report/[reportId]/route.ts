@@ -14,7 +14,7 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { reportId: string } }
+  { params }: { params: Promise<{ reportId: string }> }
 ) {
   try {
     const session = await getServerSession()
@@ -22,10 +22,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { reportId } = await params
+
     const { data: report, error } = await supabase
       .from('video_interview_reports')
       .select('*')
-      .eq('id', params.reportId)
+      .eq('id', reportId)
       .single()
 
     if (error || !report) {
