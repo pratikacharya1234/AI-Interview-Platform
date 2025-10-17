@@ -446,6 +446,14 @@ export default function VideoInterviewNew() {
     if (!session?.user?.email) return
 
     try {
+      // Transform messages to match API expectations
+      const transformedMessages = messages.map(msg => ({
+        id: msg.id,
+        type: msg.role === 'interviewer' ? 'interviewer' : 'candidate',
+        text: msg.content,
+        timestamp: msg.timestamp.toISOString()
+      }))
+
       const interviewData = {
         id: sessionId,
         userId: session.user.email,
@@ -453,7 +461,7 @@ export default function VideoInterviewNew() {
         startTime: startTime.toISOString(),
         endTime: new Date().toISOString(),
         duration: Math.round((Date.now() - startTime.getTime()) / 1000),
-        messages,
+        messages: transformedMessages,
         status: 'completed',
         position,
         company,
