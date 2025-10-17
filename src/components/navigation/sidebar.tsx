@@ -296,6 +296,12 @@ const navigationItems: SidebarItem[] = [
         href: '/contact',
         icon: MessageSquare,
       },
+      {
+        id: 'system-health',
+        name: 'System Health',
+        href: '/system-health',
+        icon: Shield,
+      },
     ]
   }
 ]

@@ -10,12 +10,15 @@ export async function POST(request: NextRequest) {
     Validator.validateStringLength(text, 'Text', 1, 2500)
 
     if (!process.env.ELEVENLABS_API_KEY) {
+      // Return a message indicating browser TTS should be used
+      console.log('ElevenLabs API key not configured, using browser TTS fallback')
       return NextResponse.json(
         { 
-          error: 'ElevenLabs API key not configured. Please configure ELEVENLABS_API_KEY in your environment variables.',
-          fallback: 'browser_tts'
+          message: 'Using browser text-to-speech',
+          fallback: 'browser_tts',
+          text: text
         },
-        { status: 503 }
+        { status: 200 }
       )
     }
 

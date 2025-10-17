@@ -36,7 +36,8 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
                          pathname.startsWith('/resources') ||
                          pathname.startsWith('/help') ||
                          pathname.startsWith('/tutorials') ||
-                         pathname.startsWith('/contact')
+                         pathname.startsWith('/contact') ||
+                         pathname.startsWith('/system-health')
   
   if (isLandingPage) {
     // Landing page - no layout wrapper, just preferences context

@@ -121,6 +121,25 @@ export default function VideoInterviewNew() {
         body: JSON.stringify({ text, voice: 'Rachel' })
       })
 
+      // Check if we should use browser TTS fallback
+      const contentType = response.headers.get('content-type')
+      
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json()
+        if (data.fallback === 'browser_tts') {
+          // Use browser TTS
+          console.log('Using browser TTS fallback')
+          const utterance = new SpeechSynthesisUtterance(text)
+          utterance.rate = 0.9
+          utterance.pitch = 1.0
+          await new Promise<void>((resolve) => {
+            utterance.onend = () => resolve()
+            speechSynthesis.speak(utterance)
+          })
+          return
+        }
+      }
+
       if (!response.ok) {
         throw new Error('TTS failed')
       }
@@ -254,11 +273,7 @@ export default function VideoInterviewNew() {
         }
 
         mediaRecorder.start(100)
-        console.log('🎤 User can speak now (MediaRecorder)')
-        
-        // Set a fallback transcript for MediaRecorder mode
-        // In production, this would use a speech-to-text service
-        transcriptRef.current = "I have relevant experience and skills for this position."
+        console.log('MediaRecorder started - audio recording active')
       }
 
     } catch (err: any) {
@@ -310,14 +325,37 @@ export default function VideoInterviewNew() {
     try {
       let userTranscript = transcript
 
-      // If no transcript, provide a fallback
-      if (!userTranscript || userTranscript.length < 3) {
-        console.warn('⚠️ No transcript provided or too short. Using fallback.')
-        // Use a default response for testing/demo purposes
-        userTranscript = "I have experience with the technologies mentioned and I'm excited about this opportunity."
+      // If no transcript from Web Speech API, try server-side transcription
+      if (!userTranscript && audioBlob && audioBlob.size > 1000) {
+        console.log('Attempting server-side transcription...')
         
-        // Still show a warning to the user
-        setError('Speech recognition had issues. Using a sample response for demo purposes.')
+        const formData = new FormData()
+        formData.append('audio', audioBlob, 'audio.webm')
+        formData.append('language', 'en-US')
+        
+        try {
+          const response = await fetch('/api/speech-to-text', {
+            method: 'POST',
+            body: formData
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.transcript) {
+              userTranscript = data.transcript
+            }
+          }
+        } catch (error) {
+          console.error('Server-side transcription failed:', error)
+        }
+      }
+
+      // Final check for transcript
+      if (!userTranscript || userTranscript.length < 3) {
+        console.warn('No transcript available from any source.')
+        setError('Unable to capture speech. Please ensure your microphone is working and speak clearly.')
+        setConversationState('waiting_for_user')
+        return
       }
 
       console.log('✅ User said:', userTranscript)
