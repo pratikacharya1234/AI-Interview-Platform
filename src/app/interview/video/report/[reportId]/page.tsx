@@ -5,7 +5,7 @@
  * Displays comprehensive feedback after video interview
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,18 +48,23 @@ interface Report {
   percentile_rank?: number
 }
 
-export default function VideoInterviewReportPage({ params }: { params: { reportId: string } }) {
+export default function VideoInterviewReportPage({ 
+  params 
+}: { 
+  params: Promise<{ reportId: string }> 
+}) {
   const router = useRouter()
   const [report, setReport] = useState<Report | null>(null)
   const [loading, setLoading] = useState(true)
+  const resolvedParams = use(params)
 
   useEffect(() => {
     fetchReport()
-  }, [params.reportId])
+  }, [resolvedParams.reportId])
 
   const fetchReport = async () => {
     try {
-      const response = await fetch(`/api/video-interview/report/${params.reportId}`)
+      const response = await fetch(`/api/video-interview/report/${resolvedParams.reportId}`)
       if (response.ok) {
         const data = await response.json()
         setReport(data.report)
