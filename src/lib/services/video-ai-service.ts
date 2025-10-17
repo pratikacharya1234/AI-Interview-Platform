@@ -78,8 +78,9 @@ export class VideoAIService {
    */
   async transcribeAudio(audioBuffer: Buffer, format: string = 'webm'): Promise<TranscriptionResult> {
     try {
-      // Create a File-like object from buffer
-      const file = new File([audioBuffer], `audio.${format}`, { type: `audio/${format}` })
+      // Convert Buffer to Uint8Array for File constructor
+      const uint8Array = new Uint8Array(audioBuffer)
+      const file = new File([uint8Array], `audio.${format}`, { type: `audio/${format}` })
       
       const transcription = await openai.audio.transcriptions.create({
         file: file,

@@ -406,19 +406,19 @@ export default function VideoInterviewLive({
                   {/* Controls */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
                     <Button
-                      variant={videoEnabled ? 'default' : 'destructive'}
-                      size="icon"
+                      variant={videoEnabled ? 'primary' : 'danger'}
+                      size="sm"
                       onClick={toggleVideo}
-                      className="rounded-full"
+                      className="rounded-full p-3"
                     >
                       {videoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
                     </Button>
 
                     <Button
-                      variant={audioEnabled ? 'default' : 'destructive'}
-                      size="icon"
+                      variant={audioEnabled ? 'primary' : 'danger'}
+                      size="sm"
                       onClick={toggleAudio}
-                      className="rounded-full"
+                      className="rounded-full p-3"
                     >
                       {audioEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
                     </Button>
@@ -436,7 +436,7 @@ export default function VideoInterviewLive({
                     ) : (
                       <Button
                         size="lg"
-                        variant="destructive"
+                        variant="danger"
                         onClick={stopRecording}
                         className="rounded-full px-8"
                       >
