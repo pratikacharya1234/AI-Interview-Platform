@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { gamificationService } from '@/lib/services/gamification-service'
+import { gamificationService } from '@/lib/services/gamification-service-simple'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,31 +17,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
+    // Use email as user ID if database is not available
+    let userId = session.user.email
+    
+    if (supabase) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', session.user.email)
+        .single()
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      if (user) {
+        userId = user.id
+      }
     }
 
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
 
     if (action === 'progress') {
-      const progress = await gamificationService.getUserProgress(user.id)
+      const progress = await gamificationService.getUserProgress(userId)
       return NextResponse.json(progress)
     }
 
     if (action === 'achievements') {
-      const achievements = await gamificationService.getUserAchievements(user.id)
+      const achievements = await gamificationService.getUserAchievements(userId)
       return NextResponse.json(achievements)
     }
 
     if (action === 'available') {
-      const available = await gamificationService.getAvailableAchievements(user.id)
+      const available = await gamificationService.getAvailableAchievements(userId)
       return NextResponse.json(available)
     }
 
@@ -51,7 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'streak') {
-      const streakInfo = await gamificationService.getStreakInfo(user.id)
+      const streakInfo = await gamificationService.getStreakInfo(userId)
       return NextResponse.json(streakInfo)
     }
 
@@ -72,26 +79,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
+    // Use email as user ID if database is not available
+    let userId = session.user.email
+    
+    if (supabase) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', session.user.email)
+        .single()
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      if (user) {
+        userId = user.id
+      }
     }
 
     const body = await request.json()
     const { action, xp_amount, source, context } = body
 
     if (action === 'award_xp') {
-      const progress = await gamificationService.awardXP(user.id, xp_amount, source)
+      const progress = await gamificationService.awardXP(userId, xp_amount, source)
       return NextResponse.json(progress)
     }
 
     if (action === 'check_achievements') {
-      const newAchievements = await gamificationService.checkAndAwardAchievements(user.id, context)
+      const newAchievements = await gamificationService.checkAndAwardAchievements(userId, context)
       return NextResponse.json(newAchievements)
     }
 
