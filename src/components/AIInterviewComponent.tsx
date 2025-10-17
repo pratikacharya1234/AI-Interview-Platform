@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -385,12 +386,67 @@ function QuestionDisplay({ question, questionNumber, totalQuestions, onSubmit, i
 }
 
 export default function AIInterviewComponent() {
+  const { data: session } = useSession()
   const interview = useInterview({
     onQuestionComplete: (response) => {
       console.log('Question completed:', response)
     },
-    onSessionComplete: (session) => {
+    onSessionComplete: async (session) => {
       console.log('Interview completed:', session)
+      
+      // Save interview to database
+      try {
+        const interviewData = {
+          id: session.sessionId,
+          startTime: session.startTime.toISOString(),
+          endTime: session.endTime?.toISOString() || new Date().toISOString(),
+          duration: Math.round((new Date().getTime() - session.startTime.getTime()) / 1000),
+          messages: session.questions.map((q, idx) => {
+            const response = session.responses[idx]
+            return [
+              {
+                id: `q_${idx}`,
+                type: 'interviewer',
+                text: q.question,
+                timestamp: new Date(session.startTime.getTime() + idx * 60000).toISOString()
+              },
+              response && {
+                id: `a_${idx}`,
+                type: 'candidate',
+                text: response.userResponse,
+                timestamp: new Date(session.startTime.getTime() + idx * 60000 + 30000).toISOString()
+              }
+            ].filter(Boolean)
+          }).flat(),
+          position: session.position,
+          company: session.company,
+          status: 'completed',
+          videoEnabled: false,
+          metrics: {
+            totalQuestions: session.questions.length,
+            totalResponses: session.responses.length,
+            averageScore: session.overallScore,
+            completionRate: (session.responses.length / session.questions.length) * 100
+          },
+          feedback: session.feedback
+        }
+
+        const response = await fetch('/api/interview/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(interviewData)
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          // Redirect to feedback page
+          window.location.href = `/interview/feedback?id=${data.interviewId}`
+        } else {
+          console.error('Failed to save interview')
+        }
+      } catch (error) {
+        console.error('Error saving interview:', error)
+      }
     },
     onError: (error) => {
       console.error('Interview error:', error)
