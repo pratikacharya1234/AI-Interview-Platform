@@ -4,20 +4,24 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import Anthropic from '@anthropic-ai/sdk'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
-})
+// Initialize Gemini AI - only if API key is available
+const genAI = process.env.GEMINI_API_KEY 
+  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  : null
 
-const anthropic = new Anthropic({
-  apiKey: process.env.CLAUDE_API_KEY!
-})
+// Initialize Anthropic - only if API key is available
+const anthropic = process.env.CLAUDE_API_KEY
+  ? new Anthropic({
+      apiKey: process.env.CLAUDE_API_KEY
+    })
+  : null
 
 // ============================================================================
 // TYPES
