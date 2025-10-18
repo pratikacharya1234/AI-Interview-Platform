@@ -51,58 +51,59 @@ interface RecentActivity {
 export default function ModernDashboard() {
   const { data: session } = useSession()
   const [stats, setStats] = useState<DashboardStats>({
-    totalInterviews: 24,
-    averageScore: 78,
-    weeklyProgress: 12,
-    currentStreak: 5,
-    completionRate: 85,
-    totalPracticeTime: 1240
+    totalInterviews: 0,
+    averageScore: 0,
+    weeklyProgress: 0,
+    currentStreak: 0,
+    completionRate: 0,
+    totalPracticeTime: 0
   })
   
-  const [upcomingInterviews] = useState<UpcomingInterview[]>([
-    {
-      id: '1',
-      title: 'System Design Interview',
-      type: 'Technical',
-      date: 'Tomorrow',
-      time: '3:00 PM',
-      difficulty: 'Hard'
-    },
-    {
-      id: '2',
-      title: 'Behavioral Interview',
-      type: 'Behavioral',
-      date: 'Friday',
-      time: '2:00 PM',
-      difficulty: 'Medium'
-    }
-  ])
+  const [upcomingInterviews, setUpcomingInterviews] = useState<UpcomingInterview[]>([])
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
-  const [recentActivities] = useState<RecentActivity[]>([
-    {
-      id: '1',
-      type: 'interview',
-      title: 'Frontend Technical Interview',
-      timestamp: '2 hours ago',
-      score: 85,
-      status: 'completed'
-    },
-    {
-      id: '2',
-      type: 'practice',
-      title: 'Data Structures Practice',
-      timestamp: '5 hours ago',
-      score: 92,
-      status: 'completed'
-    },
-    {
-      id: '3',
-      type: 'achievement',
-      title: 'Unlocked: Interview Master Badge',
-      timestamp: 'Yesterday',
-      status: 'new'
+  // Fetch dashboard statistics
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Fetch stats
+        const statsResponse = await fetch('/api/dashboard/stats')
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json()
+          if (statsData.success) {
+            setStats(statsData.stats)
+          }
+        }
+        
+        // Fetch activities and upcoming interviews
+        const activitiesResponse = await fetch('/api/dashboard/activities')
+        if (activitiesResponse.ok) {
+          const activitiesData = await activitiesResponse.json()
+          if (activitiesData.success) {
+            setRecentActivities(activitiesData.activities)
+            setUpcomingInterviews(activitiesData.upcomingInterviews)
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err)
+        setError('Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
     }
-  ])
+    
+    fetchDashboardData()
+    
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30000)
+    
+    return () => clearInterval(interval)
+  }, [])
   
   const quickActions = [
     {
@@ -167,6 +168,37 @@ export default function ModernDashboard() {
     }
   }
   
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading your dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+        <div className="flex items-center gap-3">
+          <div className="text-red-600 dark:text-red-400">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-red-800 dark:text-red-200 font-medium">Error loading dashboard</h3>
+            <p className="text-red-600 dark:text-red-400 text-sm mt-1">{error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
@@ -176,7 +208,9 @@ export default function ModernDashboard() {
             Welcome back, {session?.user?.name || 'User'}
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            You&apos;re on a {stats.currentStreak} day streak. Keep it up!
+            {stats.currentStreak > 0 
+              ? `You're on a ${stats.currentStreak} day streak. Keep it up!`
+              : 'Start your interview streak today!'}
           </p>
         </div>
         <Link
@@ -328,8 +362,16 @@ export default function ModernDashboard() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                No upcoming interviews scheduled
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400 mb-4">No upcoming interviews scheduled</p>
+                <Link
+                  href="/interview"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  <Play className="h-4 w-4" />
+                  Schedule Interview
+                </Link>
               </div>
             )}
           </div>
@@ -343,31 +385,44 @@ export default function ModernDashboard() {
             </h2>
           </div>
           <div className="p-6 space-y-4">
-            {recentActivities.map((activity) => {
-              const Icon = getActivityIcon(activity.type)
-              return (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-900/50 rounded-lg">
-                    <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {activity.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {activity.timestamp}
-                      </span>
-                      {activity.score && (
-                        <span className="text-xs text-green-600 dark:text-green-400">
-                          Score: {activity.score}%
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity) => {
+                const Icon = getActivityIcon(activity.type)
+                return (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-900/50 rounded-lg">
+                      <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {activity.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {activity.timestamp}
                         </span>
-                      )}
+                        {activity.score && (
+                          <span className="text-xs text-green-600 dark:text-green-400">
+                            Score: {activity.score}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            ) : (
+              <div className="text-center py-6">
+                <MessageSquare className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">No recent activity</p>
+                <Link
+                  href="/interview"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                >
+                  Start your first interview
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
