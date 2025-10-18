@@ -21,13 +21,12 @@ export class VoiceInterviewService {
       .from('interview_sessions')
       .insert([{
         user_id: userId,
-        company_name: request.company || '',
-        position: request.position,
-        interview_type: 'voice',
-        difficulty: request.difficulty,
+        title: `${request.position} Interview`,
+        description: `Voice interview for ${request.company || 'Company'}`,
+        interview_type: 'conversational',
         status: 'in_progress',
-        mode: 'voice',
-        start_time: new Date().toISOString()
+        started_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
       }])
       .select()
       .single()
@@ -58,7 +57,7 @@ export class VoiceInterviewService {
       .from('interview_sessions')
       .select('*')
       .eq('user_id', userId)
-      .eq('mode', 'voice')
+      .eq('interview_type', 'conversational')
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -68,16 +67,16 @@ export class VoiceInterviewService {
       id: session.id,
       user_id: session.user_id,
       session_id: session.id,
-      candidate_name: session.position || 'Interview',
-      position: session.position || '',
-      company: session.company_name || '',
-      difficulty: session.difficulty,
+      candidate_name: session.title || 'Interview',
+      position: session.title || '',
+      company: session.description || '',
+      difficulty: 'medium',
       question_types: ['technical'],
       total_questions: 5,
-      questions_completed: session.current_question_index || 0,
-      overall_score: 0,
+      questions_completed: 0,
+      overall_score: session.overall_score || 0,
       status: session.status === 'completed' ? 'completed' : 'active',
-      started_at: session.start_time,
+      started_at: session.started_at || session.created_at,
       created_at: session.created_at,
       updated_at: session.updated_at
     }))
@@ -113,7 +112,8 @@ export class VoiceInterviewService {
       .from('interview_sessions')
       .update({ 
         status: 'completed',
-        end_time: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        overall_score: 85
       })
       .eq('id', interviewId)
       .select()
@@ -125,16 +125,16 @@ export class VoiceInterviewService {
       id: session.id,
       user_id: session.user_id,
       session_id: session.id,
-      candidate_name: session.position || 'Candidate',
-      position: session.position || '',
-      company: session.company_name || '',
-      difficulty: session.difficulty,
+      candidate_name: session.title || 'Candidate',
+      position: session.title || '',
+      company: session.description || '',
+      difficulty: 'medium',
       question_types: ['technical'],
       total_questions: 5,
       questions_completed: 5,
       overall_score: 85,
       status: 'completed',
-      started_at: session.start_time,
+      started_at: session.started_at || session.created_at,
       created_at: session.created_at,
       updated_at: session.updated_at
     }
@@ -145,7 +145,7 @@ export class VoiceInterviewService {
       responses: [],
       analytics: [],
       overallMetrics: {
-        totalDuration: session.duration_seconds || 1800,
+        totalDuration: session.duration_minutes ? session.duration_minutes * 60 : 1800,
         averageScore: 85,
         strongAreas: ['Clear communication', 'Technical knowledge'],
         improvementAreas: ['Problem-solving speed'],

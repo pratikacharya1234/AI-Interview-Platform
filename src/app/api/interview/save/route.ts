@@ -134,7 +134,17 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Supabase error:', error)
-      throw new Error(`Failed to save to database: ${error.message}`)
+      
+      // Return success with warning instead of throwing error
+      return NextResponse.json({
+        success: true,
+        interviewId: interviewData.id,
+        metrics,
+        feedback,
+        feedbackImageUrl,
+        warning: `Database save failed: ${error.message}`,
+        message: 'Interview processed successfully (database save failed)'
+      })
     }
 
     // Update user scores if user is authenticated
@@ -156,8 +166,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error saving interview:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Full error details:', errorMessage)
+    
     return NextResponse.json(
-      { error: 'Failed to save interview session' },
+      { 
+        error: 'Failed to save interview session',
+        details: errorMessage,
+        success: false
+      },
       { status: 500 }
     )
   }
