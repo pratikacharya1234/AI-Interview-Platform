@@ -447,7 +447,7 @@ export default function AIInterviewComponent() {
 
         console.log('📤 Sending interview data to API...')
         
-        const response = await fetch('/api/interview/save', {
+        const response = await fetch('/api/interview/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(interviewData)
@@ -458,8 +458,12 @@ export default function AIInterviewComponent() {
 
         if (response.ok || data.success) {
           console.log('✅ Interview saved successfully!')
-          // Don't redirect, just show success message
-          // The component will show the completion screen
+          console.log('📊 Saved with ID:', data.interviewId)
+          console.log('💾 Saved at:', data.savedAt)
+          // Store the saved interview ID for future reference
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem('lastInterviewId', data.interviewId)
+          }
         } else {
           console.error('⚠️ Failed to save interview:', data.error || data.details)
           // Still continue to show results even if save failed

@@ -56,14 +56,27 @@ export default function FeedbackClient({ interviewId }: FeedbackClientProps) {
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/interview/save?id=${interviewId}`)
+      // First try the feedback endpoint
+      let response = await fetch(`/api/interview/feedback?id=${interviewId}`)
+      
+      // If feedback endpoint doesn't exist, try the save endpoint as fallback
+      if (response.status === 404) {
+        response = await fetch(`/api/interview/save?id=${interviewId}`)
+      }
+      
       if (!response.ok) {
         throw new Error(`Failed to fetch interview: ${response.status}`)
       }
       
       const data = await response.json()
       if (data.success) {
-        setInterview(data.interview)
+        // Handle both possible response formats
+        const interviewData = data.interview || data.interviews?.find((i: any) => i.id === interviewId)
+        if (interviewData) {
+          setInterview(interviewData)
+        } else {
+          throw new Error('Interview not found')
+        }
       } else {
         throw new Error(data.error || 'Interview not found')
       }

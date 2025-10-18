@@ -53,8 +53,19 @@ export default function HistoryClient() {
       setLoading(true)
       setError(null)
       
-      const response = await fetch('/api/interview/save')
+      const response = await fetch('/api/interview/history')
       if (!response.ok) {
+        // If 404, likely means API doesn't exist, try the save endpoint as fallback
+        if (response.status === 404) {
+          const fallbackResponse = await fetch('/api/interview/save')
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json()
+            if (fallbackData.success) {
+              setInterviews(fallbackData.interviews || [])
+              return
+            }
+          }
+        }
         throw new Error(`Failed to fetch interviews: ${response.status}`)
       }
       
