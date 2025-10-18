@@ -40,6 +40,166 @@ RLS policies are automatically created by the migration script. Verify they're a
 - Check Authentication → Policies in the dashboard
 - Ensure all tables have appropriate policies enabled
 
+## Deployment Guide for AI Interview Platform
+
+## 🚀 Quick Deployment to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/pratikacharya1234/AI-Interview-Platform)
+
+## Prerequisites
+
+1. **Vercel Account** - [Sign up for free](https://vercel.com/signup)
+2. **GitHub Account** - For OAuth authentication
+3. **API Keys** - See required keys below
+
+## 🔑 Environment Variables Setup
+
+### Required Variables (App won't work without these)
+
+| Variable | Description | How to Get |
+|----------|-------------|------------|
+| `NEXTAUTH_URL` | Your deployment URL | `https://your-app.vercel.app` (set after deployment) |
+| `NEXTAUTH_SECRET` | Random secret for NextAuth | Run: `openssl rand -base64 32` |
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID | [GitHub Developer Settings](https://github.com/settings/developers) |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Secret | Same as above |
+| `GOOGLE_GEMINI_API_KEY` | For AI features | [Google AI Studio](https://makersuite.google.com/app/apikey) |
+
+### Optional Variables (For additional features)
+
+| Variable | Description | Required For |
+|----------|-------------|--------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL | Database features |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | Database features |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service key | Database features |
+| `ELEVENLABS_API_KEY` | ElevenLabs API | Voice features |
+| `LEONARDO_API_KEY` | Leonardo AI | Image generation |
+
+## 📝 Step-by-Step Deployment
+
+### Step 1: GitHub OAuth Setup
+
+1. Go to [GitHub Settings > Developer settings > OAuth Apps](https://github.com/settings/developers)
+2. Click **"New OAuth App"**
+3. Fill in the details:
+   - **Application name**: AI Interview Pro
+   - **Homepage URL**: `https://your-app.vercel.app`
+   - **Authorization callback URL**: `https://your-app.vercel.app/api/auth/callback/github`
+4. Click **"Register application"**
+5. Copy the **Client ID** and generate a **Client Secret**
+
+### Step 2: Deploy to Vercel
+
+1. Click the deploy button above or go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Import the GitHub repository
+3. Configure environment variables:
+   ```
+   NEXTAUTH_URL=https://[your-project].vercel.app
+   NEXTAUTH_SECRET=[generated-secret]
+   GITHUB_CLIENT_ID=[your-github-client-id]
+   GITHUB_CLIENT_SECRET=[your-github-client-secret]
+   GOOGLE_GEMINI_API_KEY=[your-gemini-api-key]
+   ```
+4. Click **"Deploy"**
+
+### Step 3: Post-Deployment Configuration
+
+1. **Update NEXTAUTH_URL**:
+   - Go to Vercel Dashboard > Your Project > Settings > Environment Variables
+   - Update `NEXTAUTH_URL` with your actual deployment URL
+   - Redeploy the project
+
+2. **Update GitHub OAuth**:
+   - Return to GitHub OAuth App settings
+   - Update URLs with your actual Vercel deployment URL
+
+## 🧪 Testing Your Deployment
+
+1. **Authentication Test**:
+   - Visit your deployed app
+   - Click "Sign In"
+   - Authenticate with GitHub
+   - Verify redirect to dashboard
+
+2. **AI Features Test**:
+   - Start a practice interview
+   - Test text-based interview
+   - Verify AI responses
+
+3. **Navigation Test**:
+   - Check all navigation links
+   - Verify mobile responsiveness
+   - Test command palette (Cmd/Ctrl + K)
+
+## 🐛 Troubleshooting Common Issues
+
+### Issue: "CLIENT_FETCH_ERROR" on sign-in
+
+**Solution**:
+- Verify `NEXTAUTH_URL` matches your deployment URL exactly
+- Ensure `NEXTAUTH_SECRET` is set
+- Check GitHub OAuth callback URL
+
+### Issue: 404 errors on navigation
+
+**Solution**:
+- Clear browser cache
+- Verify all pages are deployed
+- Check Vercel build logs
+
+### Issue: AI features not working
+
+**Solution**:
+- Verify `GOOGLE_GEMINI_API_KEY` is valid
+- Check API quotas
+- Review Vercel Functions logs
+
+### Issue: Database features not working
+
+**Solution**:
+- Supabase variables are optional
+- App works without database
+- Features will use mock data if Supabase is not configured
+
+## 📊 Monitoring & Analytics
+
+### Vercel Analytics
+- Enable Web Analytics in Vercel Dashboard
+- Monitor performance metrics
+- Track user engagement
+
+### Error Tracking
+- Check Vercel Functions logs
+- Monitor browser console for client errors
+- Review build logs for compilation issues
+
+## 🔄 Updating Your Deployment
+
+1. **Automatic Updates**:
+   - Push changes to main branch
+   - Vercel auto-deploys on push
+
+2. **Manual Redeploy**:
+   - Go to Vercel Dashboard
+   - Click "Redeploy"
+   - Select deployment to redeploy
+
+## 📚 Additional Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [NextAuth.js Documentation](https://next-auth.js.org)
+- [Vercel Documentation](https://vercel.com/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+
+## 🆘 Getting Help
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/pratikacharya1234/AI-Interview-Platform/issues)
+- **Discussions**: [Ask questions and share ideas](https://github.com/pratikacharya1234/AI-Interview-Platform/discussions)
+- **Email Support**: support@aiinterviewpro.com
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
 ## Environment Configuration
 
 ### 1. Production Environment Variables
