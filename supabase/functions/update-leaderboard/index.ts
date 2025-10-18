@@ -1,3 +1,6 @@
+// @ts-nocheck
+// This is a Supabase Edge Function (Deno runtime), not a regular TypeScript file
+// VSCode errors can be ignored - this runs on Supabase's servers, not in Next.js
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 

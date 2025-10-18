@@ -24,73 +24,19 @@ export async function GET(request: NextRequest) {
       .eq('table_name', 'leaderboard_cache')
       .single()
     
-    // If table doesn't exist, return mock data
+    // If table doesn't exist, return empty leaderboard
     if (!tables) {
-      const mockLeaderboard = [
-        {
-          user_id: '1',
-          username: 'TopPerformer',
-          global_rank: 1,
-          previous_rank: 2,
-          rank_change: 1,
-          performance_score: 95.5,
-          adjusted_score: 98.2,
-          streak_bonus: 0.25,
-          streak_count: 5,
-          badge_level: 'diamond',
-          profiles: {
-            username: 'TopPerformer',
-            avatar_url: null,
-            full_name: 'Top Performer'
-          }
-        },
-        {
-          user_id: '2',
-          username: 'RisingStar',
-          global_rank: 2,
-          previous_rank: 3,
-          rank_change: 1,
-          performance_score: 92.3,
-          adjusted_score: 94.8,
-          streak_bonus: 0.20,
-          streak_count: 4,
-          badge_level: 'platinum',
-          profiles: {
-            username: 'RisingStar',
-            avatar_url: null,
-            full_name: 'Rising Star'
-          }
-        },
-        {
-          user_id: '3',
-          username: 'Consistent',
-          global_rank: 3,
-          previous_rank: 1,
-          rank_change: -2,
-          performance_score: 88.7,
-          adjusted_score: 91.2,
-          streak_bonus: 0.15,
-          streak_count: 3,
-          badge_level: 'gold',
-          profiles: {
-            username: 'Consistent',
-            avatar_url: null,
-            full_name: 'Consistent Player'
-          }
-        }
-      ]
-      
       return NextResponse.json({
-        leaderboard: mockLeaderboard,
+        leaderboard: [],
         pagination: {
           page,
           limit,
-          total: 3,
-          totalPages: 1
+          total: 0,
+          totalPages: 0
         },
         userPosition: null,
         lastUpdated: new Date().toISOString(),
-        isMockData: true
+        message: 'No leaderboard data available yet. Complete interviews to see rankings!'
       })
     }
     

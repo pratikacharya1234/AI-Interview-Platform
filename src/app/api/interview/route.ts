@@ -12,26 +12,10 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      // Return mock data for unauthenticated users
+      // Return empty array for unauthenticated users
       return NextResponse.json({
-        interviews: [
-          {
-            id: '1',
-            interview_type: 'behavioral',
-            title: 'Sample Behavioral Interview',
-            description: 'Practice common behavioral questions',
-            status: 'pending',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            interview_type: 'technical',
-            title: 'Sample Technical Interview',
-            description: 'Practice technical questions',
-            status: 'pending',
-            created_at: new Date().toISOString()
-          }
-        ]
+        interviews: [],
+        message: 'Please sign in to view your interviews'
       })
     }
     
@@ -111,18 +95,11 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating interview:', error)
       
-      // Return mock session if database fails
-      return NextResponse.json({
-        session: {
-          id: `mock-${Date.now()}`,
-          user_id: user.id,
-          interview_type,
-          title,
-          description,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        }
-      })
+      // Return error if database fails
+      return NextResponse.json(
+        { error: `Database error: ${error.message}` },
+        { status: 500 }
+      )
     }
     
     return NextResponse.json({ session })
