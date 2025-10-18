@@ -1,4 +1,9 @@
-# Supabase Database Setup for AI Interview Platform
+# 🚀 Complete Supabase Backend Setup Guide
+
+## Prerequisites
+- Supabase account (create at https://supabase.com)
+- Project created in Supabase Dashboard
+- Access to SQL Editor in Supabase Setup for AI Interview Platform
 
 This document provides comprehensive setup instructions and usage guidelines for the AI Interview Platform's Supabase database.
 
