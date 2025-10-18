@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
     // Calculate interview metrics
     const metrics = calculateInterviewMetrics(interviewData)
     
-    // Generate AI feedback based on responses
-    const feedback = await generateInterviewFeedback(interviewData.messages)
+    // Use provided feedback if available, otherwise generate
+    const feedback = interviewData.feedback || await generateInterviewFeedback(interviewData.messages)
 
     // Generate feedback image
     let feedbackImageUrl = null
@@ -118,10 +118,10 @@ export async function POST(request: NextRequest) {
         description: `Interview for ${interviewData.company || 'Tech Company'}`,
         status: interviewData.status || 'completed',
         duration_minutes: Math.round(interviewData.duration / 60),
-        ai_accuracy_score: feedback.scores.overall,
-        communication_score: feedback.scores.communication,
-        technical_score: feedback.scores.technicalSkills,
-        overall_score: feedback.scores.overall,
+        ai_accuracy_score: feedback.scores?.overall || feedback.overall || 0,
+        communication_score: feedback.scores?.communication || 0,
+        technical_score: feedback.scores?.technicalSkills || feedback.scores?.technical || 0,
+        overall_score: feedback.scores?.overall || feedback.overall || 0,
         feedback: feedback,
         questions: interviewData.messages.filter(m => m.type === 'interviewer'),
         answers: interviewData.messages.filter(m => m.type === 'candidate'),

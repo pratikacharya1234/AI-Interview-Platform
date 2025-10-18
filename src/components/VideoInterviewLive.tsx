@@ -65,6 +65,7 @@ export default function VideoInterviewLive({
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [liveMetrics, setLiveMetrics] = useState<LiveMetrics | null>(null)
   const [sequenceNumber, setSequenceNumber] = useState(0)
+  const [interviewStartTime] = useState(new Date())
 
   // Feedback states
   const [lastEvaluation, setLastEvaluation] = useState<any>(null)
@@ -314,18 +315,70 @@ export default function VideoInterviewLive({
     try {
       setIsProcessing(true)
 
-      const response = await fetch('/api/video-interview/end', {
+      // First, end the video interview session
+      const endResponse = await fetch('/api/video-interview/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId })
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        onComplete(data.report.id)
+      if (endResponse.ok) {
+        const endData = await endResponse.json()
+        
+        // Now save to the regular interview history
+        const interviewData = {
+          id: sessionId,
+          startTime: interviewStartTime.toISOString(),
+          endTime: new Date().toISOString(),
+          duration: sequenceNumber * 30, // Approximate based on responses
+          messages: transcripts.map((t, index) => ({
+            id: `${sessionId}-${index}`,
+            type: t.speaker === 'ai' ? 'interviewer' : 'candidate',
+            text: t.text,
+            timestamp: t.timestamp.toISOString()
+          })),
+          videoEnabled: true,
+          position: jobTitle,
+          company: 'AI Interview Platform',
+          status: 'completed',
+          feedback: {
+            overall: endData.report?.report_json?.performance?.strengths?.join(' ') || 'Interview completed successfully.',
+            strengths: endData.report?.strengths || [],
+            improvements: endData.report?.weaknesses || [],
+            recommendations: endData.report?.report_json?.recommendations || [],
+            scores: {
+              communication: endData.report?.avg_clarity_score || 0,
+              technicalSkills: endData.report?.avg_technical_score || 0,
+              problemSolving: endData.report?.avg_behavioral_score || 0,
+              culturalFit: endData.report?.avg_confidence_score || 0,
+              overall: endData.report?.overall_score || 0
+            }
+          },
+          metrics: {
+            completionRate: 100,
+            questionsCompleted: liveMetrics?.questions_completed || sequenceNumber
+          }
+        }
+
+        // Save to regular interview history
+        const saveResponse = await fetch('/api/interview/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(interviewData)
+        })
+
+        if (saveResponse.ok) {
+          const saveData = await saveResponse.json()
+          // Navigate to feedback page
+          window.location.href = `/interview/feedback?id=${sessionId}`
+        } else {
+          // If save fails, still complete with report ID
+          onComplete(endData.report.id)
+        }
       }
     } catch (error) {
       console.error('End interview error:', error)
+      alert('Failed to end interview. Please try again.')
     } finally {
       setIsProcessing(false)
     }
