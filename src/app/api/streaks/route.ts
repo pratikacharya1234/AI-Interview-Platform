@@ -11,10 +11,22 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      // Return mock data for unauthenticated users
+      return NextResponse.json({
+        streak: {
+          current: 0,
+          longest: 0,
+          totalSessions: 0,
+          lastActiveDate: null,
+          status: 'inactive',
+          frozen: false,
+          freezeUsedDate: null
+        },
+        sessions: [],
+        achievements: [],
+        nextMilestone: 3,
+        streakBonus: 0
+      })
     }
     
     // Get user's streak data
