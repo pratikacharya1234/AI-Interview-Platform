@@ -32,21 +32,25 @@ interface QuestionDetailProps {
     question_type: string
     difficulty_level: string
     estimated_time_minutes: number
+    points?: number
+    description?: string
     sample_answer?: string
-    answer_guidelines?: string
-    evaluation_criteria?: any
-    key_points?: string[]
-    common_mistakes?: string[]
     hints?: string[]
-    follow_up_questions?: string[]
-    related_topics?: string[]
-    code_snippet?: string
-    code_language?: string
+    solution_approach?: string
+    code_template?: string
+    test_cases?: any[]
+    evaluation_criteria?: any
     tags?: string[]
+    skills_tested?: string[]
+    times_asked?: number
+    times_answered?: number
+    average_score?: number
+    success_rate?: number
     is_attempted?: boolean
     question_categories?: {
       name: string
-      color: string
+      color?: string
+      icon?: string
     }
   }
   onClose: () => void
@@ -144,16 +148,16 @@ export default function QuestionDetail({ question, onClose }: QuestionDetailProp
           </div>
         </div>
 
-        {/* Code Snippet if available */}
-        {question.code_snippet && (
+        {/* Code Template if available */}
+        {question.code_template && (
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Code Snippet</CardTitle>
+                <CardTitle className="text-sm">Code Template</CardTitle>
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => copyToClipboard(question.code_snippet!)}
+                  onClick={() => copyToClipboard(question.code_template!)}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -161,7 +165,7 @@ export default function QuestionDetail({ question, onClose }: QuestionDetailProp
             </CardHeader>
             <CardContent>
               <pre className="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto">
-                <code className="text-sm">{question.code_snippet}</code>
+                <code className="text-sm">{question.code_template}</code>
               </pre>
             </CardContent>
           </Card>
@@ -241,50 +245,69 @@ export default function QuestionDetail({ question, onClose }: QuestionDetailProp
           <TabsContent value="solution" className="space-y-4">
             {question.sample_answer ? (
               <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Sample Answer</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm whitespace-pre-wrap">{question.sample_answer}</p>
-                  </CardContent>
-                </Card>
+                {question.description && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {question.description}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-                {question.key_points && question.key_points.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Key Points</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {question.key_points.map((point, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                            <span className="text-sm">{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+            {question.code_template && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Code Template</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
+                    <code className="text-sm">{question.code_template}</code>
+                  </pre>
+                </CardContent>
+              </Card>
+            )}
 
-                {question.common_mistakes && question.common_mistakes.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Common Mistakes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {question.common_mistakes.map((mistake, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-                            <span className="text-sm">{mistake}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+            {question.test_cases && question.test_cases.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Test Cases</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {question.test_cases.map((testCase: any, index: number) => (
+                      <div key={index} className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <p className="text-sm font-medium">Test Case {index + 1}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Input: {JSON.stringify(testCase.input)}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Expected: {JSON.stringify(testCase.expected)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {question.evaluation_criteria && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Evaluation Criteria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {typeof question.evaluation_criteria === 'string' 
+                      ? question.evaluation_criteria 
+                      : JSON.stringify(question.evaluation_criteria, null, 2)}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
               </div>
             ) : (
               <p className="text-gray-500">No solution available yet.</p>
@@ -292,16 +315,16 @@ export default function QuestionDetail({ question, onClose }: QuestionDetailProp
           </TabsContent>
 
           <TabsContent value="resources" className="space-y-4">
-            {question.related_topics && question.related_topics.length > 0 && (
+            {question.skills_tested && question.skills_tested.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Related Topics</CardTitle>
+                  <CardTitle className="text-sm">Skills Tested</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {question.related_topics.map((topic, index) => (
+                    {question.skills_tested.map((skill: string, index: number) => (
                       <Badge key={index} variant="secondary">
-                        {topic}
+                        {skill}
                       </Badge>
                     ))}
                   </div>
@@ -309,20 +332,19 @@ export default function QuestionDetail({ question, onClose }: QuestionDetailProp
               </Card>
             )}
 
-            {question.follow_up_questions && question.follow_up_questions.length > 0 && (
+            {question.tags && question.tags.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Follow-up Questions</CardTitle>
+                  <CardTitle className="text-sm">Related Tags</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
-                    {question.follow_up_questions.map((followUp, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm">{followUp}</span>
-                      </li>
+                  <div className="flex flex-wrap gap-2">
+                    {question.tags.map((tag: string, index: number) => (
+                      <Badge key={index} variant="outline">
+                        {tag}
+                      </Badge>
                     ))}
-                  </ul>
+                  </div>
                 </CardContent>
               </Card>
             )}

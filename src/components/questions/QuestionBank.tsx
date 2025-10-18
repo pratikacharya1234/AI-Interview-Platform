@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { 
   Search, 
   Filter, 
@@ -20,31 +22,26 @@ import {
   Brain,
   Sparkles,
   ChevronRight,
+  ChevronLeft,
   Clock,
   Target,
   AlertCircle,
-  CheckCircle,
   RefreshCw,
-  Download,
-  Bookmark,
-  Share2,
-  Eye,
-  MessageSquare,
+  Database,
+  TrendingUp,
+  Award,
+  CheckCircle,
   XCircle
 } from 'lucide-react'
 import QuestionCard from './QuestionCard'
 
-// Dynamically import components that use Dialog to prevent SSR issues
+// Dynamic imports for client-only components
 const Dialog = dynamic(
   () => import('@/components/ui/dialog').then(mod => mod.Dialog),
   { ssr: false }
 )
 const DialogContent = dynamic(
   () => import('@/components/ui/dialog').then(mod => mod.DialogContent),
-  { ssr: false }
-)
-const DialogDescription = dynamic(
-  () => import('@/components/ui/dialog').then(mod => mod.DialogDescription),
   { ssr: false }
 )
 const DialogHeader = dynamic(
@@ -55,76 +52,141 @@ const DialogTitle = dynamic(
   () => import('@/components/ui/dialog').then(mod => mod.DialogTitle),
   { ssr: false }
 )
+const DialogDescription = dynamic(
+  () => import('@/components/ui/dialog').then(mod => mod.DialogDescription),
+  { ssr: false }
+)
 
 const QuestionGenerator = dynamic(() => import('./QuestionGenerator'), { ssr: false })
 const QuestionDetail = dynamic(() => import('./QuestionDetail'), { ssr: false })
 
+// Types matching the production schema
 interface Question {
   id: string
   question_text: string
-  question_type: string
-  category_id: string
-  difficulty_level: string
+  question_type: 'coding' | 'behavioral' | 'system_design' | 'technical' | 'open_ended'
+  category_id: string | null
+  difficulty_level: 'easy' | 'medium' | 'hard' | 'expert'
   estimated_time_minutes: number
-  sample_answer: string
-  tags: string[]
-  is_attempted: boolean
+  points: number
+  description?: string
+  sample_answer?: string
+  hints?: string[]
+  solution_approach?: string
+  tags?: string[]
+  skills_tested?: string[]
   times_asked: number
-  average_score: number
-  question_categories: {
+  times_answered: number
+  average_score?: number
+  success_rate?: number
+  is_active: boolean
+  is_premium: boolean
+  is_reviewed: boolean
+  created_at: string
+  updated_at: string
+  // Joined data
+  question_categories?: {
     id: string
     name: string
     slug: string
-    icon: string
-    color: string
+    icon?: string
+    color?: string
+    description?: string
   }
+  // Client-side flag
+  is_attempted?: boolean
 }
 
 interface Category {
   id: string
   name: string
   slug: string
-  icon: string
-  color: string
+  description?: string
+  icon?: string
+  color?: string
+  parent_id?: string | null
+  display_order: number
+  is_active: boolean
   question_count: number
+  created_at: string
+  updated_at: string
+}
+
+interface QuestionFilters {
+  category: string
+  difficulty: string
+  type: string
+  search: string
+}
+
+interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
 }
 
 export default function QuestionBank() {
+  const router = useRouter()
+  
+  // State management
   const [questions, setQuestions] = useState<Question[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all')
-  const [selectedType, setSelectedType] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const [mounted, setMounted] = useState(false)
+  
+  // Filters
+  const [filters, setFilters] = useState<QuestionFilters>({
+    category: 'all',
+    difficulty: 'all',
+    type: 'all',
+    search: ''
+  })
+  
+  // Pagination
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 1
+  })
+  
+  // UI state
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
   const [showGenerator, setShowGenerator] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   // Prevent hydration issues
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Fetch data when filters or pagination changes
+  useEffect(() => {
+    if (mounted) {
+      fetchQuestions()
+    }
+  }, [mounted, filters, pagination.page])
+
+  // Fetch categories once on mount
   useEffect(() => {
     if (mounted) {
       fetchCategories()
-      fetchQuestions()
     }
-  }, [mounted, selectedCategory, selectedDifficulty, selectedType, searchQuery, currentPage])
+  }, [mounted])
 
+  // Fetch categories from API
   const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/questions/categories')
-      if (response.ok) {
-        const data = await response.json()
-        setCategories(data.categories || [])
+      const data = await response.json()
+      
+      if (data.success && data.categories) {
+        setCategories(data.categories)
       } else {
-        throw new Error('Failed to fetch categories')
+        setCategories([])
       }
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -132,37 +194,66 @@ export default function QuestionBank() {
     }
   }, [])
 
+  // Fetch questions from API
   const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
+      
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '12',
-        ...(selectedCategory !== 'all' && { category: selectedCategory }),
-        ...(selectedDifficulty !== 'all' && { difficulty: selectedDifficulty }),
-        ...(selectedType !== 'all' && { type: selectedType }),
-        ...(searchQuery && { search: searchQuery })
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        ...(filters.category !== 'all' && { category: filters.category }),
+        ...(filters.difficulty !== 'all' && { difficulty: filters.difficulty }),
+        ...(filters.type !== 'all' && { type: filters.type }),
+        ...(filters.search && { search: filters.search })
       })
 
       const response = await fetch(`/api/questions?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setQuestions(data.questions || [])
-        setTotalPages(data.pagination?.totalPages || 1)
+      const data = await response.json()
+      
+      if (data.questions) {
+        setQuestions(data.questions)
+        if (data.pagination) {
+          setPagination(prev => ({
+            ...prev,
+            total: data.pagination.total,
+            totalPages: data.pagination.totalPages
+          }))
+        }
       } else {
-        throw new Error('Failed to fetch questions')
+        setQuestions([])
+        setError('No questions available at the moment.')
       }
     } catch (error) {
       console.error('Error fetching questions:', error)
-      setError('Failed to load questions. Please try again later.')
+      setError('Unable to load questions. Please check your connection and try again.')
       setQuestions([])
-      setTotalPages(1)
     } finally {
       setLoading(false)
     }
-  }, [currentPage, selectedCategory, selectedDifficulty, selectedType, searchQuery])
+  }, [filters, pagination.page, pagination.limit])
 
+  // Handle refresh
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    await fetchQuestions()
+    setIsRefreshing(false)
+  }, [fetchQuestions])
+
+  // Handle filter changes
+  const handleFilterChange = useCallback((key: keyof QuestionFilters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+    setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page
+  }, [])
+
+  // Handle page change
+  const handlePageChange = useCallback((newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
+  // Handle question generation
   const handleGenerateQuestions = useCallback(async (params: any) => {
     try {
       setIsGenerating(true)
@@ -207,12 +298,15 @@ export default function QuestionBank() {
     }
   }, [questions])
 
+  // Reset all filters
   const handleReset = useCallback(() => {
-    setSelectedCategory('all')
-    setSelectedDifficulty('all')
-    setSelectedType('all')
-    setSearchQuery('')
-    setCurrentPage(1)
+    setFilters({
+      category: 'all',
+      difficulty: 'all',
+      type: 'all',
+      search: ''
+    })
+    setPagination(prev => ({ ...prev, page: 1 }))
   }, [])
 
   // Don't render dynamic content until mounted to prevent hydration issues
@@ -305,13 +399,13 @@ export default function QuestionBank() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search questions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
               <SelectTrigger className="w-full lg:w-[200px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
@@ -324,7 +418,7 @@ export default function QuestionBank() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
+            <Select value={filters.difficulty} onValueChange={(value) => handleFilterChange('difficulty', value)}>
               <SelectTrigger className="w-full lg:w-[150px]">
                 <SelectValue placeholder="Difficulty" />
               </SelectTrigger>
@@ -336,7 +430,7 @@ export default function QuestionBank() {
                 <SelectItem value="expert">Expert</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={selectedType} onValueChange={setSelectedType}>
+            <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
               <SelectTrigger className="w-full lg:w-[150px]">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -404,7 +498,12 @@ export default function QuestionBank() {
           {questions.map((question) => (
             <QuestionCard
               key={question.id}
-              question={question}
+              question={{
+                ...question,
+                tags: question.tags || [],
+                average_score: question.average_score || 0,
+                is_attempted: question.is_attempted || false
+              }}
               onClick={() => setSelectedQuestion(question)}
             />
           ))}
@@ -426,34 +525,25 @@ export default function QuestionBank() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6">
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
+            size="sm"
+            onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
+            disabled={pagination.page === 1}
           >
+            <ChevronLeft className="h-4 w-4" />
             Previous
           </Button>
-          <div className="flex items-center gap-2">
-            {[...Array(Math.min(5, totalPages))].map((_, i) => {
-              const page = i + 1
-              return (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? 'primary' : 'outline'}
-                  size="sm"
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              )
-            })}
-          </div>
+          <span className="text-sm text-gray-600">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
+            size="sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={pagination.page === pagination.totalPages}
           >
             Next
           </Button>
@@ -473,8 +563,8 @@ export default function QuestionBank() {
             <QuestionGenerator
               categories={categories}
               onGenerate={handleGenerateQuestions}
-              isGenerating={isGenerating}
               onClose={() => setShowGenerator(false)}
+              isGenerating={isGenerating}
             />
           </DialogContent>
         </Dialog>
@@ -485,7 +575,14 @@ export default function QuestionBank() {
         <Dialog open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <QuestionDetail
-              question={selectedQuestion}
+              question={{
+                ...selectedQuestion,
+                tags: selectedQuestion.tags || [],
+                question_categories: selectedQuestion.question_categories ? {
+                  name: selectedQuestion.question_categories.name,
+                  color: selectedQuestion.question_categories.color || 'gray'
+                } : undefined
+              }}
               onClose={() => setSelectedQuestion(null)}
             />
           </DialogContent>

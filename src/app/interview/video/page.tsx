@@ -1,365 +1,350 @@
-'use client'
+"use client"
 
-/**
- * Video Interview Page
- * Lobby for starting video interviews
- */
+import { useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Video, VideoOff, Mic, MicOff, ArrowLeft, Loader2 } from "lucide-react"
+import Link from "next/link"
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { 
-  Video, 
-  Mic, 
-  Camera,
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  User,
-  Briefcase,
-  Target
-} from 'lucide-react'
-import VideoInterviewLive from '@/components/VideoInterviewLive'
-
-interface Persona {
+interface Message {
   id: string
-  name: string
-  role: string
-  personality_traits: string[]
-  interview_style: string
-  tone: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
 }
 
 export default function VideoInterviewPage() {
-  const router = useRouter()
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false)
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [interviewStarted, setInterviewStarted] = useState(false)
+  const [interviewDuration, setInterviewDuration] = useState(0)
+  const [showSummary, setShowSummary] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [status, setStatus] = useState<'idle' | 'in_progress'>('idle')
   
-  // Lobby states
-  const [personas, setPersonas] = useState<Persona[]>([])
-  const [selectedPersona, setSelectedPersona] = useState('')
-  const [jobTitle, setJobTitle] = useState('')
-  const [interviewType, setInterviewType] = useState<'technical' | 'behavioral' | 'system-design'>('technical')
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
-  const [loading, setLoading] = useState(false)
-  
-  // Permission states
-  const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
-  const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
-  
-  // Interview states
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [personaName, setPersonaName] = useState('')
-  const [showLive, setShowLive] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const startTimeRef = useRef<number>(0)
+  const durationIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
-    fetchPersonas()
-    checkPermissions()
+    if (interviewStarted && !durationIntervalRef.current) {
+      startTimeRef.current = Date.now()
+      durationIntervalRef.current = setInterval(() => {
+        setInterviewDuration(Math.floor((Date.now() - startTimeRef.current) / 1000))
+      }, 1000)
+    }
+
+    return () => {
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current)
+      }
+    }
+  }, [interviewStarted])
+
+  useEffect(() => {
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+      }
+    }
   }, [])
 
-  const fetchPersonas = async () => {
+  const startCamera = async () => {
     try {
-      const response = await fetch('/api/persona')
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      })
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+
+      mediaStreamRef.current = stream
+      setIsVideoEnabled(true)
+      setIsAudioEnabled(true)
+    } catch (error) {
+      console.error("Error accessing camera:", error)
+      alert("Unable to access camera. Please check permissions.")
+    }
+  }
+
+  const stopCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+      mediaStreamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    setIsVideoEnabled(false)
+    setIsAudioEnabled(false)
+  }
+
+  const toggleVideo = () => {
+    if (mediaStreamRef.current) {
+      const videoTrack = mediaStreamRef.current.getVideoTracks()[0]
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled
+        setIsVideoEnabled(videoTrack.enabled)
+      }
+    }
+  }
+
+  const toggleAudio = () => {
+    if (mediaStreamRef.current) {
+      const audioTrack = mediaStreamRef.current.getAudioTracks()[0]
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled
+        setIsAudioEnabled(audioTrack.enabled)
+      }
+    }
+  }
+
+  const startRecording = () => {
+    if (!mediaStreamRef.current) return
+
+    audioChunksRef.current = []
+    const mediaRecorder = new MediaRecorder(mediaStreamRef.current)
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunksRef.current.push(event.data)
+      }
+    }
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+      await processAudioResponse(audioBlob)
+    }
+
+    mediaRecorderRef.current = mediaRecorder
+    mediaRecorder.start()
+    setIsRecording(true)
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
+  }
+
+  const processAudioResponse = async (audioBlob: Blob) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64Audio = reader.result as string
+      sendMessage(`[Audio Response: ${base64Audio.substring(0, 50)}...]`)
+    }
+    reader.readAsDataURL(audioBlob)
+  }
+
+  const sendMessage = async (text: string) => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text,
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, userMessage])
+    
+    setStatus('in_progress')
+    
+    // Call API for AI response
+    try {
+      const response = await fetch('/api/interview/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            parts: [{ type: 'text', text: m.content }]
+          }))
+        })
+      })
+      
       if (response.ok) {
         const data = await response.json()
-        setPersonas(data)
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: data.content || 'I understand. Please continue.',
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, aiMessage])
       }
     } catch (error) {
-      console.error('Error fetching personas:', error)
-    }
-  }
-
-  const checkPermissions = async () => {
-    try {
-      const cameraStatus = await navigator.permissions.query({ name: 'camera' as PermissionName })
-      const micStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName })
-      
-      setCameraPermission(cameraStatus.state as any)
-      setMicPermission(micStatus.state as any)
-
-      cameraStatus.onchange = () => setCameraPermission(cameraStatus.state as any)
-      micStatus.onchange = () => setMicPermission(micStatus.state as any)
-    } catch (error) {
-      console.error('Permission check error:', error)
-    }
-  }
-
-  const requestPermissions = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      stream.getTracks().forEach(track => track.stop())
-      setCameraPermission('granted')
-      setMicPermission('granted')
-    } catch (error) {
-      console.error('Permission request error:', error)
-      setCameraPermission('denied')
-      setMicPermission('denied')
+      console.error('Error sending message:', error)
+    } finally {
+      setStatus('idle')
     }
   }
 
   const startInterview = async () => {
-    if (!selectedPersona || !jobTitle) {
-      alert('Please select a persona and enter job title')
-      return
+    if (!isVideoEnabled) {
+      await startCamera()
     }
-
-    if (cameraPermission !== 'granted' || micPermission !== 'granted') {
-      alert('Please grant camera and microphone permissions')
-      return
-    }
-
-    try {
-      setLoading(true)
-
-      const response = await fetch('/api/video-interview/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          persona_id: selectedPersona,
-          job_title: jobTitle,
-          interview_type: interviewType,
-          difficulty: difficulty
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to start interview')
-      }
-
-      const data = await response.json()
-      setSessionId(data.session.id)
-      
-      const selectedPersonaData = personas.find(p => p.id === selectedPersona)
-      setPersonaName(selectedPersonaData?.name || 'Interviewer')
-      
-      setShowLive(true)
-    } catch (error) {
-      console.error('Start interview error:', error)
-      alert('Failed to start interview. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    setInterviewStarted(true)
+    sendMessage("Start the interview. Introduce yourself as an AI interviewer and ask the first question.")
   }
 
-  const handleComplete = (reportId: string) => {
-    router.push(`/interview/video/report/${reportId}`)
-  }
-
-  if (showLive && sessionId) {
-    return (
-      <VideoInterviewLive
-        sessionId={sessionId}
-        personaName={personaName}
-        jobTitle={jobTitle}
-        onComplete={handleComplete}
-      />
-    )
+  const endInterview = () => {
+    stopCamera()
+    setShowSummary(true)
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current)
+    }
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">AI Video Interview</h1>
-        <p className="text-muted-foreground">
-          Practice with real-time AI interviewer using voice and video
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto flex items-center justify-between px-6 py-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span>Back to Home</span>
+          </Link>
+          <h1 className="text-xl font-bold">Video Interview</h1>
+          <div className="w-24" />
+        </div>
+      </header>
 
-      <div className="grid gap-6">
-        {/* Permissions Check */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="h-5 w-5" />
-              Device Permissions
-            </CardTitle>
-            <CardDescription>
-              We need access to your camera and microphone for the video interview
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Video className="h-4 w-4" />
-                <span>Camera</span>
-              </div>
-              {cameraPermission === 'granted' ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  Granted
-                </Badge>
-              ) : cameraPermission === 'denied' ? (
-                <Badge variant="destructive" className="gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Denied
-                </Badge>
-              ) : (
-                <Badge variant="secondary">Not Requested</Badge>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mic className="h-4 w-4" />
-                <span>Microphone</span>
-              </div>
-              {micPermission === 'granted' ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  Granted
-                </Badge>
-              ) : micPermission === 'denied' ? (
-                <Badge variant="destructive" className="gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Denied
-                </Badge>
-              ) : (
-                <Badge variant="secondary">Not Requested</Badge>
-              )}
-            </div>
-
-            {(cameraPermission !== 'granted' || micPermission !== 'granted') && (
-              <Button onClick={requestPermissions} className="w-full">
-                Grant Permissions
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Interview Setup */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Interview Setup</CardTitle>
-            <CardDescription>
-              Configure your interview preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Job Title */}
-            <div className="space-y-2">
-              <Label htmlFor="job-title" className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4" />
-                Job Title
-              </Label>
-              <Input
-                id="job-title"
-                placeholder="e.g. Senior Software Engineer"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-              />
-            </div>
-
-            {/* Interview Type */}
-            <div className="space-y-2">
-              <Label htmlFor="interview-type" className="flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Interview Type
-              </Label>
-              <Select value={interviewType} onValueChange={(value: any) => setInterviewType(value)}>
-                <SelectTrigger id="interview-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="technical">Technical</SelectItem>
-                  <SelectItem value="behavioral">Behavioral</SelectItem>
-                  <SelectItem value="system-design">System Design</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Difficulty */}
-            <div className="space-y-2">
-              <Label htmlFor="difficulty">Difficulty Level</Label>
-              <Select value={difficulty} onValueChange={(value: any) => setDifficulty(value)}>
-                <SelectTrigger id="difficulty">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Persona Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="persona" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Select Interviewer
-              </Label>
-              <Select value={selectedPersona} onValueChange={setSelectedPersona}>
-                <SelectTrigger id="persona">
-                  <SelectValue placeholder="Choose an interviewer persona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {personas.map(persona => (
-                    <SelectItem key={persona.id} value={persona.id}>
-                      {persona.name} - {persona.role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Selected Persona Details */}
-            {selectedPersona && (
-              <Card className="bg-muted">
-                <CardContent className="pt-4">
-                  {(() => {
-                    const persona = personas.find(p => p.id === selectedPersona)
-                    if (!persona) return null
-                    return (
-                      <div className="space-y-2">
-                        <div>
-                          <span className="text-sm font-medium">Style:</span>
-                          <span className="text-sm ml-2">{persona.interview_style}</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Tone:</span>
-                          <span className="text-sm ml-2">{persona.tone}</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Traits:</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {persona.personality_traits?.map((trait, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
-                                {trait}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
+      <div className="container mx-auto px-6 py-8">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Video Section */}
+          <div className="space-y-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+                  {isVideoEnabled ? (
+                    <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="text-center">
+                        <VideoOff className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Camera is off</p>
                       </div>
-                    )
-                  })()}
+                    </div>
+                  )}
+                  {interviewStarted && (
+                    <div className="absolute top-4 right-4 rounded-lg bg-black/50 px-3 py-1 text-sm font-mono text-white backdrop-blur-sm">
+                      {Math.floor(interviewDuration / 60)}:{String(interviewDuration % 60).padStart(2, "0")}
+                    </div>
+                  )}
+                </div>
+
+                {/* Controls */}
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <Button
+                    variant={isVideoEnabled ? "primary" : "outline"}
+                    size="sm"
+                    onClick={toggleVideo}
+                    disabled={!mediaStreamRef.current}
+                    className="p-2"
+                  >
+                    {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+                  </Button>
+                  <Button
+                    variant={isAudioEnabled ? "primary" : "outline"}
+                    size="sm"
+                    onClick={toggleAudio}
+                    disabled={!mediaStreamRef.current}
+                    className="p-2"
+                  >
+                    {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                  </Button>
+                  {!interviewStarted ? (
+                    <Button onClick={startInterview} size="lg" className="ml-4">
+                      Start Interview
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={isRecording ? stopRecording : startRecording}
+                        size="lg"
+                        variant={isRecording ? "danger" : "primary"}
+                        className="ml-4"
+                        disabled={status === "in_progress"}
+                      >
+                        {isRecording ? "Stop Speaking" : "Start Speaking"}
+                      </Button>
+                      <Button onClick={endInterview} size="lg" variant="outline">
+                        End Interview
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {showSummary && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Interview Summary</h3>
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Duration:</span> {Math.floor(interviewDuration / 60)} minutes {interviewDuration % 60} seconds
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Questions Asked:</span> {messages.filter(m => m.role === 'assistant').length}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Your Responses:</span> {messages.filter(m => m.role === 'user').length - 1}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Start Button */}
-        <Button
-          size="lg"
-          onClick={startInterview}
-          disabled={loading || !selectedPersona || !jobTitle || cameraPermission !== 'granted' || micPermission !== 'granted'}
-          className="w-full"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Starting Interview...
-            </>
-          ) : (
-            <>
-              <Video className="h-5 w-5 mr-2" />
-              Start Video Interview
-            </>
-          )}
-        </Button>
+          {/* Chat Section */}
+          <div className="space-y-4">
+            <Card className="h-[600px] flex flex-col">
+              <CardContent className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-4">
+                  {!interviewStarted && (
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Click "Start Interview" to begin your AI-powered video interview session
+                      </p>
+                    </div>
+                  )}
+
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                        }`}
+                      >
+                        <p className="text-sm">{message.content}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {status === "in_progress" && (
+                    <div className="flex justify-start">
+                      <div className="rounded-lg bg-muted px-4 py-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

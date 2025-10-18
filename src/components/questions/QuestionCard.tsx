@@ -32,8 +32,8 @@ interface QuestionCardProps {
     average_score?: number
     question_categories?: {
       name: string
-      color: string
-      icon: string
+      color?: string
+      icon?: string
     }
   }
   onClick: () => void
