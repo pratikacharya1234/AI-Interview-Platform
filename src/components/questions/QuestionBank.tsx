@@ -386,7 +386,7 @@ export default function QuestionBank() {
               return (
                 <Button
                   key={page}
-                  variant={currentPage === page ? 'default' : 'outline'}
+                  variant={currentPage === page ? 'primary' : 'outline'}
                   size="sm"
                   onClick={() => setCurrentPage(page)}
                 >
