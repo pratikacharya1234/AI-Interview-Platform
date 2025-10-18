@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
@@ -52,11 +53,13 @@ interface QuestionDetailProps {
 }
 
 export default function QuestionDetail({ question, onClose }: QuestionDetailProps) {
-  const [userAnswer, setUserAnswer] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
+  const router = useRouter()
   const [showHints, setShowHints] = useState(false)
   const [showAnswer, setShowAnswer] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<any>(null)
+  const [userAnswer, setUserAnswer] = useState('')
 
   const handleSubmitAnswer = async () => {
     setIsSubmitting(true)
@@ -348,7 +351,13 @@ export default function QuestionDetail({ question, onClose }: QuestionDetailProp
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
           </Button>
-          <Button className="flex-1">
+          <Button 
+            className="flex-1"
+            onClick={() => {
+              router.push(`/practice?questionId=${question.id}`)
+              onClose()
+            }}
+          >
             Practice This Question
           </Button>
         </div>

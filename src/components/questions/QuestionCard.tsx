@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -59,6 +60,7 @@ const CATEGORY_COLORS = {
 
 export default function QuestionCard({ question, onClick }: QuestionCardProps) {
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
@@ -189,6 +191,11 @@ export default function QuestionCard({ question, onClick }: QuestionCardProps) {
           <Button
             size="sm"
             className="flex-1"
+            onClick={(e) => {
+              e.stopPropagation()
+              // Navigate to practice page with question ID
+              router.push(`/practice?questionId=${question.id}`)
+            }}
           >
             Practice
           </Button>
