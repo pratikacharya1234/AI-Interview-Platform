@@ -392,10 +392,15 @@ export default function AIInterviewComponent() {
       console.log('Question completed:', response)
     },
     onSessionComplete: async (session) => {
-      console.log('Interview completed:', session)
-      
-      // Save interview to database
       try {
+        console.log('💾 Saving interview session...', session)
+        
+        // Calculate average score
+        const avgScore = session.responses.length > 0 
+          ? session.responses.reduce((sum, r) => sum + r.score, 0) / session.responses.length 
+          : 0
+        
+        // Save interview to database
         const interviewData = {
           id: session.sessionId,
           startTime: session.startTime.toISOString(),
@@ -425,27 +430,43 @@ export default function AIInterviewComponent() {
           metrics: {
             totalQuestions: session.questions.length,
             totalResponses: session.responses.length,
-            averageScore: session.overallScore,
+            averageScore: avgScore,
             completionRate: (session.responses.length / session.questions.length) * 100
           },
-          feedback: session.feedback
+          feedback: session.feedback || {
+            overall: 'Interview completed successfully',
+            scores: {
+              communication: Math.round(avgScore * 10),
+              technicalSkills: Math.round(avgScore * 10),
+              problemSolving: Math.round(avgScore * 10),
+              culturalFit: Math.round(avgScore * 10),
+              overall: Math.round(avgScore * 10)
+            }
+          }
         }
 
+        console.log('📤 Sending interview data to API...')
+        
         const response = await fetch('/api/interview/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(interviewData)
         })
 
-        if (response.ok) {
-          const data = await response.json()
-          // Redirect to feedback page
-          window.location.href = `/interview/feedback?id=${data.interviewId}`
+        const data = await response.json()
+        console.log('📥 API Response:', data)
+
+        if (response.ok || data.success) {
+          console.log('✅ Interview saved successfully!')
+          // Don't redirect, just show success message
+          // The component will show the completion screen
         } else {
-          console.error('Failed to save interview')
+          console.error('⚠️ Failed to save interview:', data.error || data.details)
+          // Still continue to show results even if save failed
         }
       } catch (error) {
-        console.error('Error saving interview:', error)
+        console.error('❌ Error saving interview:', error)
+        // Don't throw error, let user see their results
       }
     },
     onError: (error) => {
@@ -614,9 +635,16 @@ export default function AIInterviewComponent() {
         )}
 
         {/* Action Buttons */}
-        <div className="text-center">
-          <Button onClick={interview.resetInterview} size="lg" className="mr-4">
+        <div className="text-center space-x-4">
+          <Button onClick={interview.resetInterview} size="lg">
             Start New Interview
+          </Button>
+          <Button 
+            variant="outline" 
+            size="lg"
+            onClick={() => window.location.href = '/interview/history'}
+          >
+            View History
           </Button>
           <Button 
             variant="outline" 
