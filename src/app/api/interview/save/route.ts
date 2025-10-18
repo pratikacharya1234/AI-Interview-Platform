@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Initialize Supabase client only if credentials are available
-const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null
+import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 
 interface InterviewMessage {
   id: string
@@ -40,15 +33,24 @@ interface InterviewSession {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const cookieStore = await cookies()
+    const supabase = await createClient(cookieStore)
     
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    // Get authenticated user from Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      // Try NextAuth session as fallback
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.email) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
     }
 
+    const userEmail = user?.email || (await getServerSession(authOptions))?.user?.email
     const interviewData: InterviewSession = await request.json()
     
     // Validate the interview data
@@ -87,12 +89,17 @@ export async function POST(request: NextRequest) {
       // Continue without image if generation fails
     }
 
-    // Check if Supabase is configured
-    if (!supabase) {
-      console.error('Supabase not configured')
+    // Check if tables exist
+    const { data: tableCheck } = await supabase
+      .from('interview_sessions')
+      .select('id')
+      .limit(1)
+    
+    if (!tableCheck && !user) {
+      console.error('Database tables not configured')
       return NextResponse.json({
         success: false,
-        error: 'Database connection not configured',
+        error: 'Database not properly configured',
         interviewId: interviewData.id,
         metrics,
         feedback,
@@ -100,24 +107,26 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Save to Supabase
+    // Save to Supabase with proper schema
     const { data, error } = await supabase
       .from('interview_sessions')
       .insert([{
         id: interviewData.id,
-        user_email: session.user.email,
-        start_time: interviewData.startTime,
-        end_time: interviewData.endTime,
-        duration: interviewData.duration,
-        messages: interviewData.messages,
-        video_enabled: interviewData.videoEnabled || false,
-        recording_url: interviewData.recordingUrl,
-        position: interviewData.position || 'Software Developer',
-        company: interviewData.company || 'Tech Company',
+        user_id: user?.id || null,
+        interview_type: 'conversational',
+        title: `Interview - ${interviewData.position || 'Software Developer'}`,
+        description: `Interview for ${interviewData.company || 'Tech Company'}`,
         status: interviewData.status || 'completed',
-        metrics: metrics,
+        duration_minutes: Math.round(interviewData.duration / 60),
+        ai_accuracy_score: feedback.scores.overall,
+        communication_score: feedback.scores.communication,
+        technical_score: feedback.scores.technicalSkills,
+        overall_score: feedback.scores.overall,
         feedback: feedback,
-        feedback_image_url: feedbackImageUrl,
+        questions: interviewData.messages.filter(m => m.type === 'interviewer'),
+        answers: interviewData.messages.filter(m => m.type === 'candidate'),
+        started_at: interviewData.startTime,
+        completed_at: interviewData.endTime || new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }])
@@ -128,7 +137,13 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to save to database: ${error.message}`)
     }
 
-    console.log(`Interview saved: ${interviewData.id} for user: ${session.user.email}`)
+    // Update user scores if user is authenticated
+    if (user?.id) {
+      await updateUserScores(supabase, user.id, feedback.scores)
+      await logSessionCompletion(supabase, user.id, feedback.scores)
+    }
+    
+    console.log(`Interview saved: ${interviewData.id} for user: ${userEmail}`)
 
     return NextResponse.json({
       success: true,
@@ -150,20 +165,16 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const cookieStore = await cookies()
+    const supabase = await createClient(cookieStore)
     
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Check if Supabase is configured
-    if (!supabase) {
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      // Return empty array for unauthenticated users
       return NextResponse.json({
-        success: false,
-        error: 'Database connection not configured',
+        success: true,
         interviews: []
       })
     }
@@ -177,7 +188,7 @@ export async function GET(request: NextRequest) {
         .from('interview_sessions')
         .select('*')
         .eq('id', interviewId)
-        .eq('user_email', session.user.email)
+        .eq('user_id', user.id)
         .single()
       
       if (error || !data) {
@@ -196,7 +207,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await supabase
         .from('interview_sessions')
         .select('*')
-        .eq('user_email', session.user.email)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -320,4 +331,79 @@ async function generateInterviewFeedback(messages: InterviewMessage[]) {
   }
 
   return feedback
+}
+
+// Helper function to update user scores
+async function updateUserScores(supabase: any, userId: string, scores: any) {
+  try {
+    // Get current scores
+    const { data: currentScores } = await supabase
+      .from('user_scores')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+    
+    if (currentScores) {
+      // Update with new average
+      const totalInterviews = (currentScores.total_interviews || 0) + 1
+      const newScores = {
+        ai_accuracy_score: ((currentScores.ai_accuracy_score * currentScores.total_interviews) + scores.overall) / totalInterviews,
+        communication_score: ((currentScores.communication_score * currentScores.total_interviews) + scores.communication) / totalInterviews,
+        total_interviews: totalInterviews,
+        successful_interviews: (currentScores.successful_interviews || 0) + 1,
+        last_activity_timestamp: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      await supabase
+        .from('user_scores')
+        .update(newScores)
+        .eq('user_id', userId)
+    } else {
+      // Create new score record
+      await supabase
+        .from('user_scores')
+        .insert({
+          user_id: userId,
+          ai_accuracy_score: scores.overall || 0,
+          communication_score: scores.communication || 0,
+          completion_rate: 100,
+          total_interviews: 1,
+          successful_interviews: 1,
+          last_activity_timestamp: new Date().toISOString()
+        })
+    }
+  } catch (error) {
+    console.error('Error updating user scores:', error)
+  }
+}
+
+// Helper function to log session completion
+async function logSessionCompletion(supabase: any, userId: string, scores: any) {
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    
+    await supabase
+      .from('session_logs')
+      .upsert({
+        user_id: userId,
+        session_date: today,
+        ai_accuracy_score: scores.overall,
+        communication_score: scores.communication,
+        completed: true,
+        session_count: 1
+      })
+    
+    // Update streak
+    await supabase
+      .from('user_streaks')
+      .upsert({
+        user_id: userId,
+        last_active_date: today,
+        streak_count: 1,
+        total_sessions: 1
+      })
+  } catch (error) {
+    console.error('Error logging session:', error)
+  }
 }
