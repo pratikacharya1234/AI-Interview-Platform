@@ -16,7 +16,7 @@ export default function AboutPage() {
               About AI Interview Pro
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-400">
-              We're on a mission to democratize interview preparation and help millions of professionals land their dream jobs through AI-powered practice.
+              We&apos;re on a mission to democratize interview preparation and help millions of professionals land their dream jobs through AI-powered practice.
             </p>
           </div>
 
@@ -27,7 +27,7 @@ export default function AboutPage() {
                 Founded in 2023, AI Interview Pro was born from the frustration of traditional interview preparation methods. Our founders, having gone through countless interviews themselves, realized that practice with real-time feedback was the key to success.
               </p>
               <p className="text-gray-600 dark:text-gray-400">
-                Today, we've helped over 50,000 professionals across the globe improve their interview skills and land positions at top companies including Google, Microsoft, Amazon, and many more.
+                Today, we&apos;ve helped over 50,000 professionals across the globe improve their interview skills and land positions at top companies including Google, Microsoft, Amazon, and many more.
               </p>
             </div>
             <div>
@@ -36,7 +36,7 @@ export default function AboutPage() {
                 We believe that everyone deserves access to high-quality interview preparation, regardless of their background or resources. Our AI technology levels the playing field, providing personalized coaching that was once only available to a privileged few.
               </p>
               <p className="text-gray-600 dark:text-gray-400">
-                We're committed to continuous innovation, ensuring our platform evolves with the changing job market and interview trends.
+                We&apos;re committed to continuous innovation, ensuring our platform evolves with the changing job market and interview trends.
               </p>
             </div>
           </div>

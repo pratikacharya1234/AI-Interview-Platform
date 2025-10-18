@@ -104,11 +104,11 @@ export default function CareersPage() {
                   Building the Future of Interview Preparation
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  At AI Interview Pro, we're revolutionizing how people prepare for job interviews. Our AI-powered platform 
-                  has already helped thousands of professionals land their dream jobs, and we're just getting started.
+                  At AI Interview Pro, we&apos;re revolutionizing how people prepare for job interviews. Our AI-powered platform 
+                  has already helped thousands of professionals land their dream jobs, and we&apos;re just getting started.
                 </p>
                 <p className="text-gray-600 dark:text-gray-400">
-                  We're a remote-first team of passionate individuals who believe that everyone deserves access to 
+                  We&apos;re a remote-first team of passionate individuals who believe that everyone deserves access to 
                   high-quality interview preparation, regardless of their background or resources.
                 </p>
               </div>
@@ -223,10 +223,10 @@ export default function CareersPage() {
           {/* No Open Position CTA */}
           <div className="text-center p-12 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Don't See a Perfect Fit?
+              Don&apos;t See a Perfect Fit?
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
-              We're always looking for talented individuals who share our passion for helping people succeed. 
+              We&apos;re always looking for talented individuals who share our passion for helping people succeed. 
               Send us your resume and tell us how you can contribute to our mission.
             </p>
             <Link href="/contact?type=careers">

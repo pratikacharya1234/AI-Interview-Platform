@@ -232,7 +232,7 @@ export default function DocsPage() {
                       Need more help?
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      Can't find what you're looking for? Our support team is here to help you.
+                      Can&apos;t find what you&apos;re looking for? Our support team is here to help you.
                     </p>
                     <div className="flex gap-3">
                       <Link href="/contact">

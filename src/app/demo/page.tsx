@@ -170,7 +170,7 @@ export default function DemoPage() {
           {/* Key Features */}
           <div className="mb-16">
             <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-12">
-              What You'll Experience
+              What You&apos;ll Experience
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {features.map((feature) => {

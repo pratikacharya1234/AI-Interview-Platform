@@ -132,7 +132,7 @@ export default function CommunityPage() {
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
                   Our community is built on the foundation of mutual support, continuous learning, and shared success. 
-                  Whether you're preparing for your first interview or helping others with their journey, you'll find 
+                  Whether you&apos;re preparing for your first interview or helping others with their journey, you&apos;ll find 
                   a welcoming space here to grow and connect.
                 </p>
                 <div className="flex gap-4">
@@ -266,7 +266,7 @@ export default function CommunityPage() {
                 Success Stories Coming Soon
               </h2>
               <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                We're collecting inspiring stories from our community members who have successfully landed their dream jobs. 
+                We&apos;re collecting inspiring stories from our community members who have successfully landed their dream jobs. 
                 Check back soon to read about their journeys and get motivated for your own.
               </p>
             </div>

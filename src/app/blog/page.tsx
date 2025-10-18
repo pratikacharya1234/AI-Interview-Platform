@@ -58,7 +58,7 @@ export default function BlogPage() {
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button
-                variant={selectedCategory === 'All' ? 'default' : 'outline'}
+                variant={selectedCategory === 'All' ? undefined : 'outline'}
                 onClick={() => setSelectedCategory('All')}
               >
                 All Posts
@@ -66,7 +66,7 @@ export default function BlogPage() {
               {categories.map((category) => (
                 <Button
                   key={category}
-                  variant={selectedCategory === category ? 'default' : 'outline'}
+                  variant={selectedCategory === category ? undefined : 'outline'}
                   onClick={() => setSelectedCategory(category)}
                 >
                   {category}
@@ -147,7 +147,7 @@ export default function BlogPage() {
                   No articles available yet
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-8">
-                  We're working on creating valuable content for you. Check back soon or subscribe to our newsletter to get notified when new articles are published.
+                  We&apos;re working on creating valuable content for you. Check back soon or subscribe to our newsletter to get notified when new articles are published.
                 </p>
                 <Link href="/contact">
                   <Button>Get Notified</Button>

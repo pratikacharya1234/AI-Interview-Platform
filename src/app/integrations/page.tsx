@@ -218,10 +218,10 @@ export default function IntegrationsPage() {
           {/* Request Integration */}
           <div className="text-center p-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600">
             <h2 className="text-3xl font-bold text-white mb-4">
-              Don't See Your Tool?
+              Don&apos;t See Your Tool?
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Let us know which integrations you'd like to see next. We're constantly expanding our ecosystem.
+              Let us know which integrations you&apos;d like to see next. We&apos;re constantly expanding our ecosystem.
             </p>
             <Link href="/contact?type=integration-request">
               <Button size="lg" variant="secondary">
