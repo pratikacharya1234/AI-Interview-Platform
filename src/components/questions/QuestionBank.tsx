@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { 
   Search, 
@@ -29,11 +29,35 @@ import {
   Bookmark,
   Share2,
   Eye,
-  MessageSquare
+  MessageSquare,
+  XCircle
 } from 'lucide-react'
 import QuestionCard from './QuestionCard'
-import QuestionGenerator from './QuestionGenerator'
-import QuestionDetail from './QuestionDetail'
+
+// Dynamically import components that use Dialog to prevent SSR issues
+const Dialog = dynamic(
+  () => import('@/components/ui/dialog').then(mod => mod.Dialog),
+  { ssr: false }
+)
+const DialogContent = dynamic(
+  () => import('@/components/ui/dialog').then(mod => mod.DialogContent),
+  { ssr: false }
+)
+const DialogDescription = dynamic(
+  () => import('@/components/ui/dialog').then(mod => mod.DialogDescription),
+  { ssr: false }
+)
+const DialogHeader = dynamic(
+  () => import('@/components/ui/dialog').then(mod => mod.DialogHeader),
+  { ssr: false }
+)
+const DialogTitle = dynamic(
+  () => import('@/components/ui/dialog').then(mod => mod.DialogTitle),
+  { ssr: false }
+)
+
+const QuestionGenerator = dynamic(() => import('./QuestionGenerator'), { ssr: false })
+const QuestionDetail = dynamic(() => import('./QuestionDetail'), { ssr: false })
 
 interface Question {
   id: string
@@ -69,6 +93,7 @@ export default function QuestionBank() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
   const [selectedType, setSelectedType] = useState('all')
@@ -78,27 +103,39 @@ export default function QuestionBank() {
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
   const [showGenerator, setShowGenerator] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration issues
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
-    fetchCategories()
-    fetchQuestions()
-  }, [selectedCategory, selectedDifficulty, selectedType, searchQuery, currentPage])
+    if (mounted) {
+      fetchCategories()
+      fetchQuestions()
+    }
+  }, [mounted, selectedCategory, selectedDifficulty, selectedType, searchQuery, currentPage])
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/questions/categories')
       if (response.ok) {
         const data = await response.json()
-        setCategories(data.categories)
+        setCategories(data.categories || [])
+      } else {
+        throw new Error('Failed to fetch categories')
       }
     } catch (error) {
       console.error('Error fetching categories:', error)
+      setCategories([])
     }
-  }
+  }, [])
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '12',
@@ -111,17 +148,22 @@ export default function QuestionBank() {
       const response = await fetch(`/api/questions?${params}`)
       if (response.ok) {
         const data = await response.json()
-        setQuestions(data.questions)
-        setTotalPages(data.pagination.totalPages)
+        setQuestions(data.questions || [])
+        setTotalPages(data.pagination?.totalPages || 1)
+      } else {
+        throw new Error('Failed to fetch questions')
       }
     } catch (error) {
       console.error('Error fetching questions:', error)
+      setError('Failed to load questions. Please try again later.')
+      setQuestions([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, selectedCategory, selectedDifficulty, selectedType, searchQuery])
 
-  const handleGenerateQuestions = async (params: any) => {
+  const handleGenerateQuestions = useCallback(async (params: any) => {
     try {
       setIsGenerating(true)
       const response = await fetch('/api/questions/generate', {
@@ -133,50 +175,56 @@ export default function QuestionBank() {
       if (response.ok) {
         const data = await response.json()
         // Refresh questions list
-        fetchQuestions()
+        await fetchQuestions()
         setShowGenerator(false)
-        // Show success message
-        alert(`Successfully generated ${data.count} questions!`)
+        // Show success message (replace alert with toast in production)
+        console.log(`Successfully generated ${data.count} questions!`)
       } else {
         const error = await response.json()
-        alert(`Failed to generate questions: ${error.error}`)
+        console.error(`Failed to generate questions: ${error.error}`)
       }
     } catch (error) {
       console.error('Error generating questions:', error)
-      alert('Failed to generate questions')
     } finally {
       setIsGenerating(false)
     }
-  }
+  }, [fetchQuestions])
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-      case 'hard':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-      case 'expert':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+  // Memoized values to prevent re-renders
+  const stats = useMemo(() => {
+    const attemptedCount = questions.filter(q => q.is_attempted).length
+    const avgScore = questions.length > 0
+      ? Math.round(
+          questions.reduce((sum, q) => sum + (q.average_score || 0), 0) /
+          questions.filter(q => q.average_score).length
+        ) || 0
+      : 0
+    
+    return {
+      total: questions.length,
+      attempted: attemptedCount,
+      avgScore
     }
-  }
+  }, [questions])
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'coding':
-        return Code
-      case 'behavioral':
-        return Users
-      case 'system_design':
-        return Layout
-      case 'open_ended':
-        return MessageSquare
-      default:
-        return BookOpen
-    }
+  const handleReset = useCallback(() => {
+    setSelectedCategory('all')
+    setSelectedDifficulty('all')
+    setSelectedType('all')
+    setSearchQuery('')
+    setCurrentPage(1)
+  }, [])
+
+  // Don't render dynamic content until mounted to prevent hydration issues
+  if (!mounted) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -207,7 +255,7 @@ export default function QuestionBank() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Questions</p>
-                <p className="text-2xl font-bold">{questions.length}</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
               </div>
               <BookOpen className="h-8 w-8 text-blue-500" />
             </div>
@@ -229,9 +277,7 @@ export default function QuestionBank() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Attempted</p>
-                <p className="text-2xl font-bold">
-                  {questions.filter(q => q.is_attempted).length}
-                </p>
+                <p className="text-2xl font-bold">{stats.attempted}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-purple-500" />
             </div>
@@ -242,14 +288,7 @@ export default function QuestionBank() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Avg Score</p>
-                <p className="text-2xl font-bold">
-                  {questions.length > 0
-                    ? Math.round(
-                        questions.reduce((sum, q) => sum + (q.average_score || 0), 0) /
-                        questions.filter(q => q.average_score).length
-                      ) || 0
-                    : 0}%
-                </p>
+                <p className="text-2xl font-bold">{stats.avgScore}%</p>
               </div>
               <Target className="h-8 w-8 text-orange-500" />
             </div>
@@ -311,12 +350,7 @@ export default function QuestionBank() {
             </Select>
             <Button
               variant="outline"
-              onClick={() => {
-                setSelectedCategory('all')
-                setSelectedDifficulty('all')
-                setSelectedType('all')
-                setSearchQuery('')
-              }}
+              onClick={handleReset}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Reset
@@ -325,8 +359,29 @@ export default function QuestionBank() {
         </CardContent>
       </Card>
 
+      {/* Error State */}
+      {error && (
+        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <p className="text-red-800 dark:text-red-300">{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchQuestions()}
+                className="ml-auto"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Questions Grid */}
-      {loading ? (
+      {!error && loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i}>
@@ -344,7 +399,7 @@ export default function QuestionBank() {
             </Card>
           ))}
         </div>
-      ) : questions.length > 0 ? (
+      ) : !error && questions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {questions.map((question) => (
             <QuestionCard
@@ -354,7 +409,7 @@ export default function QuestionBank() {
             />
           ))}
         </div>
-      ) : (
+      ) : !error && (
         <Card>
           <CardContent className="p-12 text-center">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -405,26 +460,28 @@ export default function QuestionBank() {
         </div>
       )}
 
-      {/* Question Generator Dialog */}
-      <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Generate Interview Questions</DialogTitle>
-            <DialogDescription>
-              Use AI to generate custom interview questions for your preparation
-            </DialogDescription>
-          </DialogHeader>
-          <QuestionGenerator
-            categories={categories}
-            onGenerate={handleGenerateQuestions}
-            isGenerating={isGenerating}
-            onClose={() => setShowGenerator(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Question Generator Dialog - Only render on client */}
+      {mounted && showGenerator && (
+        <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Generate Interview Questions</DialogTitle>
+              <DialogDescription>
+                Use AI to generate custom interview questions for your preparation
+              </DialogDescription>
+            </DialogHeader>
+            <QuestionGenerator
+              categories={categories}
+              onGenerate={handleGenerateQuestions}
+              isGenerating={isGenerating}
+              onClose={() => setShowGenerator(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
-      {/* Question Detail Dialog */}
-      {selectedQuestion && (
+      {/* Question Detail Dialog - Only render on client */}
+      {mounted && selectedQuestion && (
         <Dialog open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <QuestionDetail

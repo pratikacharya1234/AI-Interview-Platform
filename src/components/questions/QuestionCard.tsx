@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,20 +38,34 @@ interface QuestionCardProps {
   onClick: () => void
 }
 
+// Define static classes for difficulty levels
+const DIFFICULTY_STYLES = {
+  easy: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
+  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
+  hard: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
+  expert: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400',
+  default: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+}
+
+// Define static classes for category colors
+const CATEGORY_COLORS = {
+  blue: 'bg-blue-100 dark:bg-blue-900/20',
+  green: 'bg-green-100 dark:bg-green-900/20',
+  purple: 'bg-purple-100 dark:bg-purple-900/20',
+  red: 'bg-red-100 dark:bg-red-900/20',
+  yellow: 'bg-yellow-100 dark:bg-yellow-900/20',
+  default: 'bg-gray-100 dark:bg-gray-900/20'
+}
+
 export default function QuestionCard({ question, onClick }: QuestionCardProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-      case 'hard':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-      case 'expert':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-    }
+    return DIFFICULTY_STYLES[difficulty as keyof typeof DIFFICULTY_STYLES] || DIFFICULTY_STYLES.default
   }
 
   const getTypeIcon = (type: string) => {
@@ -69,6 +84,26 @@ export default function QuestionCard({ question, onClick }: QuestionCardProps) {
   }
 
   const TypeIcon = getTypeIcon(question.question_type)
+  
+  const getCategoryColor = (color?: string) => {
+    if (!color) return CATEGORY_COLORS.default
+    return CATEGORY_COLORS[color as keyof typeof CATEGORY_COLORS] || CATEGORY_COLORS.default
+  }
+
+  // Prevent hydration issues
+  if (!mounted) {
+    return (
+      <Card className="animate-pulse">
+        <CardHeader className="pb-3">
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-20 bg-gray-200 rounded mb-4"></div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card 
@@ -78,11 +113,7 @@ export default function QuestionCard({ question, onClick }: QuestionCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${
-              question.question_categories?.color 
-                ? `bg-${question.question_categories.color}-100 dark:bg-${question.question_categories.color}-900/20`
-                : 'bg-blue-100 dark:bg-blue-900/20'
-            }`}>
+            <div className={`p-2 rounded-lg ${getCategoryColor(question.question_categories?.color)}`}>
               <TypeIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
             {question.is_attempted && (
@@ -120,7 +151,7 @@ export default function QuestionCard({ question, onClick }: QuestionCardProps) {
         {question.tags && question.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {question.tags.slice(0, 3).map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
+              <Badge key={`${question.id}-tag-${index}`} variant="secondary" className="text-xs">
                 {tag}
               </Badge>
             ))}
