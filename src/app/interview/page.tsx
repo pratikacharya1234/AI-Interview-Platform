@@ -57,26 +57,26 @@ export default function InterviewPage() {
         </p>
       </div>
       <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Voice Interview */}
-          <Card className="relative overflow-hidden border-2 border-green-200 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          {/* Audio Interview */}
+          <Card className="relative overflow-hidden border-2 border-purple-200 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="absolute top-4 right-4">
-              <Badge variant="default" className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+              <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
                 <Sparkles className="w-3 h-3 mr-1" />
-                New
+                Premium
               </Badge>
             </div>
             
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center">
                   <Mic className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <CardTitle className="text-2xl text-gray-900">
-                    Voice Interview
+                    Audio Interview
                   </CardTitle>
                   <CardDescription className="text-base">
-                    AI-powered voice interview
+                    Advanced AI voice interview
                   </CardDescription>
                 </div>
               </div>
@@ -85,37 +85,37 @@ export default function InterviewPage() {
             <CardContent className="space-y-6">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <Volume2 className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700">Natural voice interaction</span>
+                  <Volume2 className="w-5 h-5 text-purple-600" />
+                  <span className="text-gray-700">AI-powered conversations</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Mic className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700">Real-time transcription</span>
+                  <Mic className="w-5 h-5 text-purple-600" />
+                  <span className="text-gray-700">Live transcription</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <BarChart3 className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700">Comprehensive feedback</span>
+                  <BarChart3 className="w-5 h-5 text-purple-600" />
+                  <span className="text-gray-700">Performance analytics</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700">Adaptive questioning</span>
+                  <Clock className="w-5 h-5 text-purple-600" />
+                  <span className="text-gray-700">Contextual follow-ups</span>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2">Perfect For:</h4>
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-2">Features:</h4>
                 <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Voice-only practice</li>
-                  <li>• No camera needed</li>
-                  <li>• Natural conversation</li>
-                  <li>• Focus on speaking</li>
+                  <li>• Custom job descriptions</li>
+                  <li>• Experience-based questions</li>
+                  <li>• Real-time feedback</li>
+                  <li>• Detailed reports</li>
                 </ul>
               </div>
 
-              <Link href="/interview/voice" className="block">
-                <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg">
+              <Link href="/interview/audio" className="block">
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg">
                   <Mic className="w-5 h-5 mr-2" />
-                  Start Voice Interview
+                  Start Audio Interview
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
