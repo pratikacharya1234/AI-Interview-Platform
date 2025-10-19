@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Loader2 } from 'lucide-react'
 import { 
   Play, 
   Search,
@@ -37,101 +39,154 @@ interface Question {
   lastScore?: number
 }
 
-const practiceQuestions: Question[] = [
-  {
-    id: '1',
-    title: 'Two Sum Problem',
-    description: 'Given an array of integers, return indices of the two numbers such that they add up to a specific target.',
-    difficulty: 'easy',
-    category: 'Arrays',
-    timeEstimate: 15,
-    popularity: 95,
-    successRate: 87,
-    tags: ['Hash Table', 'Array'],
-    hasAttempted: true,
-    lastScore: 92
-  },
-  {
-    id: '2',
-    title: 'Tell Me About Yourself',
-    description: 'A common behavioral interview question that requires a structured and compelling personal introduction.',
-    difficulty: 'medium',
-    category: 'Behavioral',
-    timeEstimate: 5,
-    popularity: 98,
-    successRate: 73,
-    tags: ['Self Introduction', 'Personal Branding'],
-    hasAttempted: true,
-    lastScore: 78
-  },
-  {
-    id: '3',
-    title: 'Design a URL Shortener',
-    description: 'Design a web service that shortens URLs like bit.ly. Consider scalability, reliability, and performance.',
-    difficulty: 'hard',
-    category: 'System Design',
-    timeEstimate: 45,
-    popularity: 89,
-    successRate: 56,
-    tags: ['Distributed Systems', 'Database Design', 'Caching'],
-    hasAttempted: false
-  },
-  {
-    id: '4',
-    title: 'Binary Tree Traversal',
-    description: 'Implement different methods to traverse a binary tree (inorder, preorder, postorder).',
-    difficulty: 'medium',
-    category: 'Trees',
-    timeEstimate: 25,
-    popularity: 91,
-    successRate: 72,
-    tags: ['Binary Tree', 'Recursion', 'DFS'],
-    hasAttempted: false
-  },
-  {
-    id: '5',
-    title: 'Handling Conflict at Work',
-    description: 'Describe a time when you had a disagreement with a colleague and how you resolved it.',
-    difficulty: 'medium',
-    category: 'Behavioral',
-    timeEstimate: 8,
-    popularity: 86,
-    successRate: 69,
-    tags: ['Conflict Resolution', 'Communication', 'Leadership'],
-    hasAttempted: false
-  },
-  {
-    id: '6',
-    title: 'Maximum Subarray Sum',
-    description: 'Find the contiguous subarray with the largest sum using Kadanes algorithm.',
-    difficulty: 'medium',
-    category: 'Dynamic Programming',
-    timeEstimate: 20,
-    popularity: 88,
-    successRate: 64,
-    tags: ['Dynamic Programming', 'Array'],
-    hasAttempted: false
-  }
-]
-
-const categories = [
-  { name: 'All Categories', count: practiceQuestions.length, icon: BookOpen },
-  { name: 'Arrays', count: practiceQuestions.filter(q => q.category === 'Arrays').length, icon: Target },
-  { name: 'Trees', count: practiceQuestions.filter(q => q.category === 'Trees').length, icon: Brain },
-  { name: 'Dynamic Programming', count: practiceQuestions.filter(q => q.category === 'Dynamic Programming').length, icon: Zap },
-  { name: 'System Design', count: practiceQuestions.filter(q => q.category === 'System Design').length, icon: Target },
-  { name: 'Behavioral', count: practiceQuestions.filter(q => q.category === 'Behavioral').length, icon: Users }
-]
+// Remove hardcoded data - will fetch from Supabase
 
 export default function PracticePage() {
   const router = useRouter()
+  const supabase = createClient()
+  const [loading, setLoading] = useState(true)
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [categories, setCategories] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All Categories')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
-  const [filteredQuestions, setFilteredQuestions] = useState(practiceQuestions)
+  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([])
+  const [user, setUser] = useState<any>(null)
 
+  // Load user and questions from Supabase
   useEffect(() => {
-    let filtered = practiceQuestions
+    loadData()
+  }, [])
+  
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      
+      // Check authentication
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/auth/signin?redirect=/practice')
+        return
+      }
+      setUser(user)
+      
+      // Fetch questions from Supabase
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('practice_questions')
+        .select('*')
+        .order('popularity', { ascending: false })
+      
+      if (questionsError) {
+        console.error('Error fetching questions:', questionsError)
+        // If table doesn't exist, create sample data
+        if (questionsError.code === '42P01') {
+          await createSampleQuestions()
+        }
+      } else if (questionsData && questionsData.length > 0) {
+        setQuestions(questionsData)
+        setFilteredQuestions(questionsData)
+        
+        // Generate categories from questions
+        const uniqueCategories = Array.from(new Set(questionsData.map(q => q.category)))
+        const categoriesWithCount = [
+          { name: 'All Categories', count: questionsData.length, icon: BookOpen },
+          ...uniqueCategories.map(cat => ({
+            name: cat,
+            count: questionsData.filter(q => q.category === cat).length,
+            icon: getCategoryIcon(cat)
+          }))
+        ]
+        setCategories(categoriesWithCount)
+      } else {
+        // No questions found, create sample data
+        await createSampleQuestions()
+      }
+      
+      // Fetch user attempts
+      const { data: attempts } = await supabase
+        .from('practice_attempts')
+        .select('question_id, score')
+        .eq('user_id', user.id)
+      
+      if (attempts) {
+        const questionsWithAttempts = questionsData?.map(q => {
+          const attempt = attempts.find(a => a.question_id === q.id)
+          return {
+            ...q,
+            hasAttempted: !!attempt,
+            lastScore: attempt?.score
+          }
+        }) || []
+        setQuestions(questionsWithAttempts)
+        setFilteredQuestions(questionsWithAttempts)
+      }
+      
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const createSampleQuestions = async () => {
+    // Create practice_questions table if it doesn't exist
+    const sampleQuestions = [
+      {
+        title: 'Two Sum Problem',
+        description: 'Given an array of integers, return indices of the two numbers such that they add up to a specific target.',
+        difficulty: 'easy',
+        category: 'Arrays',
+        timeEstimate: 15,
+        popularity: 95,
+        successRate: 87,
+        tags: ['Hash Table', 'Array']
+      },
+      {
+        title: 'Tell Me About Yourself',
+        description: 'A common behavioral interview question that requires a structured and compelling personal introduction.',
+        difficulty: 'medium',
+        category: 'Behavioral',
+        timeEstimate: 5,
+        popularity: 98,
+        successRate: 73,
+        tags: ['Self Introduction', 'Personal Branding']
+      },
+      {
+        title: 'Design a URL Shortener',
+        description: 'Design a web service that shortens URLs. Consider scalability, reliability, and performance.',
+        difficulty: 'hard',
+        category: 'System Design',
+        timeEstimate: 45,
+        popularity: 89,
+        successRate: 56,
+        tags: ['Distributed Systems', 'Database Design', 'Caching']
+      }
+    ]
+    
+    const { data, error } = await supabase
+      .from('practice_questions')
+      .insert(sampleQuestions)
+      .select()
+    
+    if (!error && data) {
+      setQuestions(data)
+      setFilteredQuestions(data)
+    }
+  }
+  
+  const getCategoryIcon = (category: string) => {
+    const iconMap: Record<string, any> = {
+      'Arrays': Target,
+      'Trees': Brain,
+      'Dynamic Programming': Zap,
+      'System Design': Target,
+      'Behavioral': Users
+    }
+    return iconMap[category] || BookOpen
+  }
+  
+  useEffect(() => {
+    let filtered = questions
 
     // Filter by search query
     if (searchQuery) {
@@ -153,7 +208,7 @@ export default function PracticePage() {
     }
 
     setFilteredQuestions(filtered)
-  }, [searchQuery, selectedCategory, selectedDifficulty])
+  }, [searchQuery, selectedCategory, selectedDifficulty, questions])
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -168,10 +223,18 @@ export default function PracticePage() {
     router.push(`/practice/${questionId}`)
   }
 
-  const attemptedQuestions = practiceQuestions.filter(q => q.hasAttempted).length
-  const averageScore = practiceQuestions
-    .filter(q => q.lastScore)
-    .reduce((acc, q) => acc + (q.lastScore || 0), 0) / practiceQuestions.filter(q => q.lastScore).length || 0
+  const completedQuestions = questions.filter((q: Question) => q.hasAttempted).length
+  const averageScore = questions
+    .filter((q: Question) => q.hasAttempted && q.lastScore)
+    .reduce((acc: number, q: Question) => acc + (q.lastScore || 0), 0) / (completedQuestions || 1)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -190,9 +253,9 @@ export default function PracticePage() {
               <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{attemptedQuestions}/{practiceQuestions.length}</div>
+              <div className="text-2xl font-bold">{completedQuestions}/{questions.length}</div>
               <p className="text-xs text-muted-foreground">
-                {Math.round((attemptedQuestions / practiceQuestions.length) * 100)}% completed
+                {Math.round((completedQuestions / questions.length) * 100)}% completed
               </p>
             </CardContent>
           </Card>
@@ -203,7 +266,7 @@ export default function PracticePage() {
               <Star className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Math.round(averageScore)}%</div>
+              <p className="text-3xl font-bold text-gray-900">{completedQuestions > 0 ? Math.round(averageScore) : 0}%</p>
               <p className="text-xs text-muted-foreground">
                 +5% from last week
               </p>
@@ -313,7 +376,7 @@ export default function PracticePage() {
                   </div>
                   {question.lastScore && (
                     <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">{question.lastScore}%</p>
+                      <p className="text-3xl font-bold text-gray-900">{question.lastScore}%</p>
                       <p className="text-xs text-muted-foreground">Last score</p>
                     </div>
                   )}

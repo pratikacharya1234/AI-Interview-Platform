@@ -106,33 +106,60 @@ export default function AudioInterviewPage() {
   const loadUserProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: profile } = await supabase
+      if (!user) {
+        // Redirect to login if not authenticated
+        router.push('/auth/signin?redirect=/interview/audio')
+        return
+      }
+      
+      // First try to get profile from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error loading profile:', profileError)
+      }
+      
+      // If profile doesn't exist, create one
+      if (!profile) {
+        const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .select('*')
-          .eq('id', user.id)
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || '',
+            username: user.email?.split('@')[0] || 'user',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
           .single()
+        
+        if (createError) {
+          console.error('Error creating profile:', createError)
+        }
         
         setUserProfile({
           id: user.id,
-          name: profile?.full_name || profile?.username || 'Candidate',
+          name: newProfile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
           email: user.email || '',
-          avatar: profile?.avatar_url
+          avatar: newProfile?.avatar_url || user.user_metadata?.avatar_url
         })
       } else {
         setUserProfile({
-          id: 'demo-user',
-          name: 'Demo Candidate',
-          email: 'demo@example.com'
+          id: user.id,
+          name: profile.full_name || profile.username || user.email?.split('@')[0] || 'User',
+          email: user.email || profile.email || '',
+          avatar: profile.avatar_url
         })
       }
     } catch (error) {
-      console.error('Error loading profile:', error)
-      setUserProfile({
-        id: 'demo-user',
-        name: 'Demo Candidate',
-        email: 'demo@example.com'
-      })
+      console.error('Error in loadUserProfile:', error)
+      // Redirect to login on error
+      router.push('/auth/signin?redirect=/interview/audio')
     }
   }
   
@@ -389,7 +416,12 @@ export default function AudioInterviewPage() {
     setAudioState(prev => ({ ...prev, isProcessing: true }))
     
     try {
-      const transcript = audioState.currentTranscript || 'I have experience working with modern web technologies and building scalable applications.'
+      const transcript = audioState.currentTranscript
+      
+      if (!transcript || transcript.trim().length === 0) {
+        setErrors({ processing: 'No audio transcript detected. Please speak clearly.' })
+        return
+      }
       
       const response = await fetch('/api/audio-interview/process', {
         method: 'POST',

@@ -30,18 +30,61 @@ export default function InterviewPage() {
   const fetchInterviewData = async () => {
     try {
       setLoading(true)
-      // For now, create mock data since the API might not be ready
-      // In production, this would fetch from your database
-      const mockInterview: InterviewData = {
-        id: params.id as string,
-        type: 'behavioral',
-        title: 'Software Engineer Interview',
-        description: 'Practice behavioral questions for software engineering roles',
-        status: 'pending',
-        created_at: new Date().toISOString()
+      
+      // Fetch from Supabase
+      const supabase = (await import('@/lib/supabase/client')).createClient()
+      
+      // Check authentication
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/auth/signin')
+        return
       }
       
-      setInterview(mockInterview)
+      // Try to fetch existing interview
+      const { data: interviewData, error: fetchError } = await supabase
+        .from('interviews')
+        .select('*')
+        .eq('id', params.id)
+        .single()
+      
+      if (fetchError || !interviewData) {
+        // Create a new interview if not found
+        const newInterview: InterviewData = {
+          id: params.id as string,
+          type: 'audio',
+          title: 'Interview Session',
+          description: 'AI-powered interview practice session',
+          status: 'pending',
+          created_at: new Date().toISOString()
+        }
+        
+        // Save to database
+        const { data: savedInterview } = await supabase
+          .from('interviews')
+          .insert({
+            id: newInterview.id,
+            user_id: user.id,
+            type: newInterview.type,
+            title: newInterview.title,
+            description: newInterview.description,
+            status: newInterview.status,
+            created_at: newInterview.created_at
+          })
+          .select()
+          .single()
+        
+        setInterview(savedInterview || newInterview)
+      } else {
+        setInterview({
+          id: interviewData.id,
+          type: interviewData.type || 'audio',
+          title: interviewData.title || interviewData.position || 'Interview Session',
+          description: interviewData.description || 'AI-powered interview practice',
+          status: interviewData.status,
+          created_at: interviewData.created_at || interviewData.started_at
+        })
+      }
     } catch (err) {
       setError('Failed to load interview data')
       console.error('Error fetching interview:', err)
