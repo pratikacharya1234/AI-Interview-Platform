@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -54,8 +55,14 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired - this is important!
+  // Check for NextAuth session first
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  
+  // Then check Supabase session
   const { data: { user }, error } = await supabase.auth.getUser()
+  
+  // User is authenticated if either NextAuth or Supabase session exists
+  const isAuthenticated = !!(token || user)
 
   // Protected routes that require authentication
   const protectedPaths = [
@@ -75,7 +82,7 @@ export async function middleware(request: NextRequest) {
   )
 
   // If accessing protected route without auth, redirect to signin
-  if (isProtectedPath && !user) {
+  if (isProtectedPath && !isAuthenticated) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/auth/signin'
     redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
@@ -83,7 +90,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
-  if (user && request.nextUrl.pathname.startsWith('/auth/')) {
+  if (isAuthenticated && request.nextUrl.pathname.startsWith('/auth/signin')) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)
