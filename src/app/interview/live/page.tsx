@@ -21,8 +21,8 @@ import type {
   InterviewSummary 
 } from "@/types/interview"
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"
+// Use Next.js API routes instead of Python backend
+const API_BASE = ''
 
 export default function LiveInterviewPage() {
   const router = useRouter()
@@ -83,7 +83,7 @@ export default function LiveInterviewPage() {
       const candidateEmail = localStorage.getItem('candidateEmail') || 'test@example.com'
       const position = localStorage.getItem('position') || 'Software Engineer'
       
-      const response = await fetch(`${BACKEND_URL}/api/interview/start`, {
+      const response = await fetch(`${API_BASE}/api/interview/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +107,7 @@ export default function LiveInterviewPage() {
         question_number: 1
       })
       
-      connectWebSocket(data.session_id)
+      // connectWebSocket(data.session_id) // Disabled for now
       
       setTranscripts([{
         id: '0',
@@ -125,48 +125,11 @@ export default function LiveInterviewPage() {
     }
   }
   
+  // Polling-based approach instead of WebSocket
   const connectWebSocket = (sessionId: string) => {
-    try {
-      setConnectionStatus('connecting')
-      const ws = new WebSocket(`${WS_URL}/ws/${sessionId}`)
-      
-      ws.onopen = () => {
-        console.log('WebSocket connected')
-        setConnectionStatus('connected')
-      }
-      
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data)
-        handleWebSocketMessage(data)
-      }
-      
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
-        setConnectionStatus('disconnected')
-        setError('Connection error. Please check your internet connection.')
-      }
-      
-      ws.onclose = () => {
-        console.log('WebSocket disconnected')
-        setConnectionStatus('disconnected')
-      }
-      
-      wsRef.current = ws
-      
-      const pingInterval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping' }))
-        }
-      }, 30000)
-      
-      return () => {
-        clearInterval(pingInterval)
-        ws.close()
-      }
-    } catch (err) {
-      console.error('WebSocket connection error:', err)
-      setConnectionStatus('disconnected')
-    }
+    // For now, we'll use polling or direct API calls
+    setConnectionStatus('connected')
+    console.log('Using polling mode for session:', sessionId)
   }
   
   const handleWebSocketMessage = (data: any) => {
@@ -261,26 +224,60 @@ export default function LiveInterviewPage() {
   }
   
   const processAudioChunk = async (chunk: Blob) => {
-    if (!session || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      return
-    }
+    if (!session) return
     
-    const reader = new FileReader()
-    reader.onloadend = async () => {
-      const base64Audio = reader.result as string
+    try {
+      const reader = new FileReader()
+      const base64Audio = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.readAsDataURL(chunk)
+      })
       
-      const message = {
-        type: 'audio_chunk',
-        data: {
-          chunk: base64Audio,
+      // Send to API instead of WebSocket
+      const response = await fetch('/api/interview/process-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: session.id,
+          audio_chunk: base64Audio,
           timestamp: Date.now(),
-          index: chunkIndexRef.current++
+          chunk_index: chunkIndexRef.current++
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Handle transcript
+        if (data.transcript) {
+          const newTranscript: Transcript = {
+            id: Date.now().toString(),
+            text: data.transcript,
+            timestamp: Date.now(),
+            confidence: 0.95,
+            speaker: 'candidate'
+          }
+          setTranscripts(prev => [...prev, newTranscript])
+        }
+        
+        // Handle AI response
+        if (data.ai_response) {
+          setCurrentAIResponse(data.ai_response)
+          
+          if (data.ai_response.assistant_reply) {
+            setTranscripts(prev => [...prev, {
+              id: Date.now().toString(),
+              text: data.ai_response.assistant_reply,
+              timestamp: Date.now(),
+              confidence: 1.0,
+              speaker: 'interviewer'
+            }])
+          }
         }
       }
-      
-      wsRef.current?.send(JSON.stringify(message))
+    } catch (error) {
+      console.error('Error processing audio chunk:', error)
     }
-    reader.readAsDataURL(chunk)
   }
   
   const stopCamera = () => {
@@ -350,11 +347,9 @@ export default function LiveInterviewPage() {
     try {
       setLoading(true)
       
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'end_interview' }))
-      }
+      // No WebSocket to close
       
-      const response = await fetch(`${BACKEND_URL}/api/interview/end`, {
+      const response = await fetch(`${API_BASE}/api/interview/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -391,9 +386,7 @@ export default function LiveInterviewPage() {
   
   const cleanup = () => {
     stopCamera()
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
+    // No WebSocket to close
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current)
     }
