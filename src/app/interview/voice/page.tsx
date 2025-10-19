@@ -214,34 +214,22 @@ export default function VoiceInterviewPage() {
         })
       })
       
-      if (!response.ok) {
-        console.error('Failed to start interview:', response.status)
-      }
+      if (!response.ok) throw new Error('Failed to start interview')
       
       const data = await response.json()
       
       // Store session
-      const sessionData = data.session || {
-        id: `voice_${Date.now()}`,
-        user_id: userProfile.id,
-        company: formData.company,
-        position: formData.position,
-        experience: formData.experience,
-        status: 'active',
-        stage: 'introduction'
-      }
-      
-      setSession(sessionData)
+      setSession(data.session)
       setInterviewState(prev => ({
         ...prev,
-        currentQuestion: data.first_question || `Welcome ${userProfile.name}! Let's begin. Tell me about yourself and your experience related to the ${formData.position} role.`,
+        currentQuestion: data.first_question,
         stage: 'introduction'
       }))
       
       setShowForm(false)
       
       // Speak the first question
-      await speakText(data.first_question || interviewState.currentQuestion)
+      await speakText(data.first_question)
       
     } catch (err) {
       console.error('Error starting interview:', err)
@@ -303,22 +291,16 @@ export default function VoiceInterviewPage() {
     try {
       setInterviewState(prev => ({ ...prev, isProcessing: true }))
       
-      // For now, use the transcript if available, otherwise use mock
-      const transcript = interviewState.currentTranscript || "I have experience in software development and I'm excited about this opportunity."
+      const formData = new FormData()
+      formData.append('audio', audioBlob)
+      formData.append('session_id', session.id)
       
-      const response = await fetch('/api/voice-interview/process', {
+      const response = await fetch('/api/voice-interview/process-audio', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: session.id,
-          transcript: transcript,
-          audio_data: 'base64_audio_placeholder'
-        })
+        body: formData
       })
       
-      if (!response.ok) {
-        console.error('Failed to process audio:', response.status)
-      }
+      if (!response.ok) throw new Error('Failed to process audio')
       
       const data = await response.json()
       
@@ -326,8 +308,7 @@ export default function VoiceInterviewPage() {
       
     } catch (err) {
       console.error('Error processing audio:', err)
-      // Use fallback
-      await processTranscript(interviewState.currentTranscript || "Sample response")
+      setError('Failed to process your response')
     } finally {
       setInterviewState(prev => ({ ...prev, isProcessing: false }))
     }
@@ -339,19 +320,17 @@ export default function VoiceInterviewPage() {
     try {
       setInterviewState(prev => ({ ...prev, isProcessing: true }))
       
-      const response = await fetch('/api/voice-interview/process', {
+      const response = await fetch('/api/voice-interview/process-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: session.id,
-          transcript: transcript
+          transcript: transcript,
+          stage: interviewState.stage
         })
       })
       
-      if (!response.ok) {
-        console.error('Failed to process response:', response.status)
-        // Continue with mock data
-      }
+      if (!response.ok) throw new Error('Failed to process response')
       
       const data = await response.json()
       
@@ -359,14 +338,7 @@ export default function VoiceInterviewPage() {
       
     } catch (err) {
       console.error('Error processing transcript:', err)
-      // Use fallback response
-      await handleInterviewResponse({
-        transcript: transcript,
-        next_question: "That's interesting. Can you tell me more about your technical skills?",
-        stage: interviewState.stage,
-        progress: interviewState.progress + 10,
-        analysis: { score: 7, strengths: ["Good response"], improvements: [] }
-      })
+      setError('Failed to process your response')
     } finally {
       setInterviewState(prev => ({ ...prev, isProcessing: false }))
     }
@@ -375,30 +347,29 @@ export default function VoiceInterviewPage() {
   const handleInterviewResponse = async (data: any) => {
     // Update responses
     const newResponse: InterviewResponse = {
-      id: data.response_id || `resp_${Date.now()}`,
+      id: data.response_id,
       interview_id: session!.id,
       question: interviewState.currentQuestion,
-      answer: data.transcript || '',
-      analysis: data.analysis || {},
+      answer: data.transcript,
+      analysis: data.analysis,
       timestamp: new Date().toISOString(),
-      stage: data.stage || interviewState.stage
+      stage: interviewState.stage
     }
     
     setInterviewState(prev => ({
       ...prev,
       responses: [...prev.responses, newResponse],
-      currentQuestion: data.next_question || 'Thank you for your response.',
-      stage: data.stage || prev.stage,
-      progress: data.progress || prev.progress + 10,
-      currentTranscript: '' // Clear transcript after processing
+      currentQuestion: data.next_question,
+      stage: data.stage,
+      progress: data.progress
     }))
     
     // Check if interview is complete
-    if (data.complete || data.stage === 'completed' || interviewState.responses.length >= 7) {
+    if (data.stage === 'completed') {
       await completeInterview()
     } else {
       // Speak next question
-      await speakText(data.next_question || interviewState.currentQuestion)
+      await speakText(data.next_question)
     }
   }
   
@@ -461,49 +432,18 @@ export default function VoiceInterviewPage() {
         })
       })
       
-      let feedbackData
-      if (response.ok) {
-        const data = await response.json()
-        feedbackData = data.feedback
-      } else {
-        // Use fallback feedback
-        feedbackData = generateFallbackFeedback()
-      }
+      if (!response.ok) throw new Error('Failed to complete interview')
       
-      setFeedback(feedbackData)
+      const data = await response.json()
+      
+      setFeedback(data.feedback)
       setShowFeedback(true)
       
     } catch (err) {
       console.error('Error completing interview:', err)
-      // Use fallback feedback
-      setFeedback(generateFallbackFeedback())
-      setShowFeedback(true)
+      setError('Failed to generate feedback')
     } finally {
       setLoading(false)
-    }
-  }
-  
-  const generateFallbackFeedback = () => {
-    const avgScore = 7 + Math.random() * 2
-    return {
-      overall_score: Math.round(avgScore),
-      communication_clarity: Math.round(avgScore + Math.random()),
-      confidence: Math.round(avgScore - 0.5 + Math.random()),
-      technical_understanding: Math.round(avgScore + Math.random()),
-      problem_solving: Math.round(avgScore),
-      strengths: [
-        'Clear communication skills',
-        'Good understanding of concepts',
-        'Professional demeanor'
-      ],
-      improvements: [
-        'Provide more specific examples',
-        'Elaborate on technical details',
-        'Show more enthusiasm'
-      ],
-      summary: 'You demonstrated solid communication skills and a good understanding of the role requirements. Your responses showed professionalism and relevant experience. With some additional preparation on specific technical topics, you would be well-positioned for this role.',
-      interview_duration: Math.round(interviewState.responses.length * 2.5),
-      total_questions: interviewState.responses.length
     }
   }
   
