@@ -59,25 +59,46 @@ export default function SignIn() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              full_name: email.split('@')[0],
+            }
           }
         })
 
         if (error) throw error
 
         if (data.user) {
-          // Create profile
-          await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              username: email.split('@')[0],
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
+          // Try to create profile, but don't fail if table doesn't exist
+          try {
+            await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                email: data.user.email,
+                username: email.split('@')[0],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+          } catch (profileError) {
+            console.log('Profile creation skipped:', profileError)
+          }
 
-          setError('Success! Check your email for the confirmation link.')
+          // For local development, auto-confirm and sign in
+          if (window.location.hostname === 'localhost') {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            })
+            
+            if (!signInError) {
+              router.push(searchParams.get('redirect') || '/dashboard')
+              return
+            }
+          }
+
+          setError('Account created! You can now sign in.')
+          setIsSignUp(false)
         }
       } else {
         // Sign in existing user
@@ -100,14 +121,50 @@ export default function SignIn() {
   }
 
   const handleDemoLogin = async () => {
-    setEmail('demo@example.com')
-    setPassword('demo123456')
-    setIsSignUp(false)
-    // Auto-submit the form
-    setTimeout(() => {
-      const form = document.getElementById('email-form') as HTMLFormElement
-      form?.requestSubmit()
-    }, 100)
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      // First try to sign in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: 'demo@example.com',
+        password: 'demo123456'
+      })
+
+      if (signInError) {
+        // If demo account doesn't exist, create it
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: 'demo@example.com',
+          password: 'demo123456',
+          options: {
+            data: {
+              full_name: 'Demo User',
+            }
+          }
+        })
+
+        if (signUpError) throw signUpError
+
+        // Try to sign in again after creating
+        const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
+          email: 'demo@example.com',
+          password: 'demo123456'
+        })
+
+        if (newSignInError) throw newSignInError
+        
+        if (newSignInData.user) {
+          router.push(searchParams.get('redirect') || '/dashboard')
+        }
+      } else if (signInData.user) {
+        router.push(searchParams.get('redirect') || '/dashboard')
+      }
+    } catch (error: any) {
+      console.error('Demo login error:', error)
+      setError('Demo login failed. Please create a new account.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
