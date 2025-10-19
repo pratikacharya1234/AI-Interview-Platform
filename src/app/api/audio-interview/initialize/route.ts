@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
 
     if (sessionError) {
       console.error('Database error:', sessionError)
+      // Don't fail the request, continue with the interview
+      // The session will be created on the next successful DB operation
     }
 
     // Generate first question based on config
@@ -54,8 +56,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error initializing interview:', error)
+    
+    // Return a more detailed error for debugging in production
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    
     return NextResponse.json(
-      { error: 'Failed to initialize interview' },
+      { 
+        error: 'Failed to initialize interview',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     )
   }

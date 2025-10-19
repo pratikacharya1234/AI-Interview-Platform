@@ -35,9 +35,10 @@ export default function InterviewPage() {
       const supabase = (await import('@/lib/supabase/client')).createClient()
       
       // Check authentication
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/auth/signin')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        console.error('Authentication error:', authError)
+        router.push(`/auth/signin?redirect=/interview/${params.id}`)
         return
       }
       
@@ -59,8 +60,8 @@ export default function InterviewPage() {
           created_at: new Date().toISOString()
         }
         
-        // Save to database
-        const { data: savedInterview } = await supabase
+        // Save to database with error handling
+        const { data: savedInterview, error: saveError } = await supabase
           .from('interviews')
           .insert({
             id: newInterview.id,
@@ -73,6 +74,10 @@ export default function InterviewPage() {
           })
           .select()
           .single()
+        
+        if (saveError) {
+          console.error('Error saving interview:', saveError)
+        }
         
         setInterview(savedInterview || newInterview)
       } else {

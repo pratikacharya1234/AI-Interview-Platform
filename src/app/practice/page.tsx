@@ -102,11 +102,15 @@ export default function PracticePage() {
         await createSampleQuestions()
       }
       
-      // Fetch user attempts
-      const { data: attempts } = await supabase
+      // Fetch user attempts with error handling
+      const { data: attempts, error: attemptsError } = await supabase
         .from('practice_attempts')
         .select('question_id, score')
         .eq('user_id', user.id)
+      
+      if (attemptsError && attemptsError.code !== '42P01') {
+        console.error('Error fetching attempts:', attemptsError)
+      }
       
       if (attempts) {
         const questionsWithAttempts = questionsData?.map(q => {
@@ -129,8 +133,9 @@ export default function PracticePage() {
   }
   
   const createSampleQuestions = async () => {
-    // Create practice_questions table if it doesn't exist
-    const sampleQuestions = [
+    try {
+      // Only create sample questions in development or if explicitly needed
+      const sampleQuestions = [
       {
         title: 'Two Sum Problem',
         description: 'Given an array of integers, return indices of the two numbers such that they add up to a specific target.',
@@ -163,14 +168,17 @@ export default function PracticePage() {
       }
     ]
     
-    const { data, error } = await supabase
-      .from('practice_questions')
-      .insert(sampleQuestions)
-      .select()
-    
-    if (!error && data) {
-      setQuestions(data)
-      setFilteredQuestions(data)
+      const { data, error } = await supabase
+        .from('practice_questions')
+        .insert(sampleQuestions)
+        .select()
+      
+      if (!error && data) {
+        setQuestions(data)
+        setFilteredQuestions(data)
+      }
+    } catch (error) {
+      console.error('Error creating sample questions:', error)
     }
   }
   

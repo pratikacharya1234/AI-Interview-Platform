@@ -3,9 +3,6 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import SetupView from "./components/SetupView"
-import InterviewView from "./components/InterviewView"
-import ResultsView from "./components/ResultsView"
 import {
   UserProfile,
   InterviewConfig,
@@ -16,6 +13,11 @@ import {
   InterviewMetrics,
   InterviewFeedback
 } from "./types"
+
+// Import components
+import SetupView from "./components/SetupView"
+import InterviewView from "./components/InterviewView"
+import ResultsView from "./components/ResultsView"
 
 export default function AudioInterviewPage() {
   const router = useRouter()
@@ -105,8 +107,10 @@ export default function AudioInterviewPage() {
   
   const loadUserProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        console.error('Auth error:', authError)
         // Redirect to login if not authenticated
         router.push('/auth/signin?redirect=/interview/audio')
         return
@@ -118,6 +122,16 @@ export default function AudioInterviewPage() {
         .select('*')
         .eq('id', user.id)
         .single()
+      
+      // Fetch user attempts with error handling
+      const { data: attempts, error: attemptsError } = await supabase
+        .from('practice_attempts')
+        .select('question_id, score')
+        .eq('user_id', user.id)
+      
+      if (attemptsError && attemptsError.code !== '42P01') {
+        console.error('Error fetching attempts:', attemptsError)
+      }
       
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error loading profile:', profileError)
@@ -411,15 +425,20 @@ export default function AudioInterviewPage() {
   }
   
   const processAudioResponse = async (audioBlob: Blob) => {
-    if (!session || !currentQuestion) return
+    if (!session || !currentQuestion) {
+      console.error('Missing session or question')
+      setErrors({ processing: 'Session expired. Please refresh the page.' })
+      return
+    }
     
     setAudioState(prev => ({ ...prev, isProcessing: true }))
     
     try {
       const transcript = audioState.currentTranscript
       
-      if (!transcript || transcript.trim().length === 0) {
-        setErrors({ processing: 'No audio transcript detected. Please speak clearly.' })
+      if (!transcript || transcript.trim().length < 10) {
+        setErrors({ processing: 'Response too short. Please provide a more detailed answer.' })
+        setAudioState(prev => ({ ...prev, isProcessing: false }))
         return
       }
       
