@@ -1,49 +1,66 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
 import { 
   Mic, 
   MicOff, 
   Volume2, 
-  Loader2, 
-  Play, 
-  Pause,
+  Loader2,
   CheckCircle,
   AlertCircle,
   User,
   Briefcase,
   Building,
-  BarChart,
+  Target,
   FileText,
-  Download
+  Download,
+  ArrowRight,
+  Clock,
+  Activity
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
+// Type definitions
 interface UserProfile {
   id: string
   name: string
   email: string
 }
 
+interface InterviewFormData {
+  company: string
+  position: string
+  jobDescription: string
+  experience: 'entry' | 'mid' | 'senior' | 'lead'
+  interviewType: 'technical' | 'behavioral' | 'mixed'
+  duration: '15' | '30' | '45' | '60'
+}
+
 interface InterviewSession {
   id: string
   user_id: string
+  user_name: string
   company: string
   position: string
+  job_description: string
   experience: string
-  status: 'active' | 'completed'
-  stage: 'introduction' | 'technical' | 'scenario' | 'closing' | 'feedback'
+  interview_type: string
+  status: 'active' | 'completed' | 'paused'
+  stage: 'introduction' | 'technical' | 'behavioral' | 'situational' | 'closing'
   started_at: string
   ended_at?: string
+  current_question_index: number
+  total_questions: number
   feedback_summary?: any
 }
 
@@ -52,23 +69,45 @@ interface InterviewResponse {
   interview_id: string
   question: string
   answer: string
-  analysis: any
+  analysis: {
+    relevance: number
+    clarity: number
+    depth: number
+    confidence: number
+    keywords_mentioned: string[]
+    follow_up_needed: boolean
+  }
   timestamp: string
   stage: string
+  response_time: number
 }
 
 interface InterviewState {
   isRecording: boolean
   isProcessing: boolean
   isSpeaking: boolean
+  isListening: boolean
   currentTranscript: string
+  interimTranscript: string
   currentQuestion: string
   responses: InterviewResponse[]
   stage: string
   progress: number
+  audioLevel: number
+  recordingDuration: number
 }
 
-const STAGES = ['introduction', 'technical', 'scenario', 'closing']
+interface FeedbackData {
+  overall_score: number
+  communication_score: number
+  technical_score: number
+  behavioral_score: number
+  strengths: string[]
+  improvements: string[]
+  detailed_analysis: string
+  recommendation: 'strong_hire' | 'hire' | 'maybe' | 'no_hire'
+  next_steps: string[]
+}
 
 export default function VoiceInterviewPage() {
   const router = useRouter()
@@ -87,23 +126,31 @@ export default function VoiceInterviewPage() {
   const [error, setError] = useState<string | null>(null)
   
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<InterviewFormData>({
     company: '',
     position: '',
-    experience: 'entry'
+    jobDescription: '',
+    experience: 'entry',
+    interviewType: 'mixed',
+    duration: '30'
   })
   const [showForm, setShowForm] = useState(true)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   
   // Interview State
   const [interviewState, setInterviewState] = useState<InterviewState>({
     isRecording: false,
     isProcessing: false,
     isSpeaking: false,
+    isListening: false,
     currentTranscript: '',
+    interimTranscript: '',
     currentQuestion: '',
     responses: [],
     stage: 'introduction',
-    progress: 0
+    progress: 0,
+    audioLevel: 0,
+    recordingDuration: 0
   })
   
   // Feedback State
@@ -194,36 +241,79 @@ export default function VoiceInterviewPage() {
     }
   }
   
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+    
+    if (!formData.company.trim()) {
+      errors.company = 'Company name is required'
+    }
+    if (!formData.position.trim()) {
+      errors.position = 'Position is required'
+    }
+    if (!formData.jobDescription.trim()) {
+      errors.jobDescription = 'Job description is required'
+    }
+    
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+  
   const startInterview = async () => {
-    if (!userProfile) return
+    if (!userProfile || !validateForm()) return
     
     try {
       setLoading(true)
       setError(null)
       
-      // Call backend to initialize interview
-      const response = await fetch('/api/voice-interview/start', {
+      // Generate AI context based on form data
+      const aiContext = {
+        user_id: userProfile.id,
+        user_name: userProfile.name,
+        company: formData.company,
+        position: formData.position,
+        job_description: formData.jobDescription,
+        experience: formData.experience,
+        interview_type: formData.interviewType,
+        duration: parseInt(formData.duration),
+        system_prompt: generateSystemPrompt(formData)
+      }
+      
+      // Initialize interview session
+      const response = await fetch('/api/voice-interview/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userProfile.id,
-          user_name: userProfile.name,
-          company: formData.company,
-          position: formData.position,
-          experience: formData.experience
-        })
+        body: JSON.stringify(aiContext)
       })
       
-      if (!response.ok) throw new Error('Failed to start interview')
+      if (!response.ok) {
+        throw new Error('Failed to initialize interview')
+      }
       
       const data = await response.json()
       
-      // Store session
-      setSession(data.session)
+      // Create session object
+      const newSession: InterviewSession = {
+        id: data.session_id,
+        user_id: userProfile.id,
+        user_name: userProfile.name,
+        company: formData.company,
+        position: formData.position,
+        job_description: formData.jobDescription,
+        experience: formData.experience,
+        interview_type: formData.interviewType,
+        status: 'active',
+        stage: 'introduction',
+        started_at: new Date().toISOString(),
+        current_question_index: 0,
+        total_questions: data.total_questions || 10
+      }
+      
+      setSession(newSession)
       setInterviewState(prev => ({
         ...prev,
         currentQuestion: data.first_question,
-        stage: 'introduction'
+        stage: 'introduction',
+        progress: 0
       }))
       
       setShowForm(false)
@@ -237,6 +327,24 @@ export default function VoiceInterviewPage() {
     } finally {
       setLoading(false)
     }
+  }
+  
+  const generateSystemPrompt = (formData: InterviewFormData): string => {
+    return `You are conducting a professional ${formData.interviewType} interview for the position of ${formData.position} at ${formData.company}. 
+    The candidate has ${formData.experience} level experience. 
+    Job Description: ${formData.jobDescription}
+    
+    Interview Guidelines:
+    1. Ask relevant questions based on the job description and candidate's experience level
+    2. Follow up on candidate's responses with deeper questions when appropriate
+    3. Evaluate responses for relevance, clarity, depth, and technical accuracy
+    4. Maintain a professional and encouraging tone
+    5. Adapt difficulty based on candidate's responses
+    6. Focus on practical scenarios and real-world applications
+    7. Duration: ${formData.duration} minutes
+    
+    Generate questions that assess both technical competence and cultural fit.
+    Provide constructive feedback and identify strengths and areas for improvement.`
   }
   
   const startRecording = async () => {
@@ -291,24 +399,36 @@ export default function VoiceInterviewPage() {
     try {
       setInterviewState(prev => ({ ...prev, isProcessing: true }))
       
-      const formData = new FormData()
-      formData.append('audio', audioBlob)
-      formData.append('session_id', session.id)
-      
-      const response = await fetch('/api/voice-interview/process-audio', {
-        method: 'POST',
-        body: formData
-      })
-      
-      if (!response.ok) throw new Error('Failed to process audio')
-      
-      const data = await response.json()
-      
-      await handleInterviewResponse(data)
+      // If we have a transcript from Web Speech API, use it
+      if (interviewState.currentTranscript) {
+        await processTranscript(interviewState.currentTranscript)
+      } else {
+        // Otherwise, send audio for transcription
+        const formData = new FormData()
+        formData.append('audio', audioBlob)
+        formData.append('session_id', session.id)
+        
+        const response = await fetch('/api/voice-interview/process-audio', {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to process audio')
+        }
+        
+        const data = await response.json()
+        
+        if (data.transcript) {
+          await processTranscript(data.transcript)
+        } else {
+          throw new Error('No transcript generated')
+        }
+      }
       
     } catch (err) {
       console.error('Error processing audio:', err)
-      setError('Failed to process your response')
+      setError('Failed to process your audio. Please ensure your microphone is working.')
     } finally {
       setInterviewState(prev => ({ ...prev, isProcessing: false }))
     }
@@ -320,25 +440,32 @@ export default function VoiceInterviewPage() {
     try {
       setInterviewState(prev => ({ ...prev, isProcessing: true }))
       
-      const response = await fetch('/api/voice-interview/process-text', {
+      const startTime = Date.now()
+      
+      const response = await fetch('/api/voice-interview/process-voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: session.id,
           transcript: transcript,
-          stage: interviewState.stage
+          stage: interviewState.stage,
+          previous_question: interviewState.currentQuestion
         })
       })
       
-      if (!response.ok) throw new Error('Failed to process response')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to process response')
+      }
       
       const data = await response.json()
+      data.response_time = Date.now() - startTime
       
       await handleInterviewResponse(data)
       
     } catch (err) {
       console.error('Error processing transcript:', err)
-      setError('Failed to process your response')
+      setError('Failed to process your response. Please try again.')
     } finally {
       setInterviewState(prev => ({ ...prev, isProcessing: false }))
     }
@@ -347,13 +474,21 @@ export default function VoiceInterviewPage() {
   const handleInterviewResponse = async (data: any) => {
     // Update responses
     const newResponse: InterviewResponse = {
-      id: data.response_id,
+      id: data.response_id || `resp_${Date.now()}`,
       interview_id: session!.id,
       question: interviewState.currentQuestion,
       answer: data.transcript,
-      analysis: data.analysis,
+      analysis: data.analysis || {
+        relevance: 0,
+        clarity: 0,
+        depth: 0,
+        confidence: 0,
+        keywords_mentioned: [],
+        follow_up_needed: false
+      },
       timestamp: new Date().toISOString(),
-      stage: interviewState.stage
+      stage: interviewState.stage,
+      response_time: data.response_time || 0
     }
     
     setInterviewState(prev => ({
@@ -575,65 +710,146 @@ export default function VoiceInterviewPage() {
   if (showForm) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-6">
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-3xl mx-auto space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Voice Interview Setup</CardTitle>
+              <CardTitle className="text-2xl">Voice Interview Setup</CardTitle>
+              <CardDescription>
+                Configure your interview parameters for a personalized experience
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
                 <User className="h-5 w-5" />
                 <div>
                   <p className="font-semibold">Welcome, {userProfile?.name}!</p>
-                  <p className="text-sm text-muted-foreground">Let's set up your interview</p>
+                  <p className="text-sm text-muted-foreground">Complete the form below to start your interview</p>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="company">Company Name</Label>
-                  <div className="relative">
-                    <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className="grid gap-6">
+                {/* Company Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Building className="h-5 w-5" />
+                    Company Information
+                  </h3>
+                  
+                  <div>
+                    <Label htmlFor="company">Company Name *</Label>
                     <Input
                       id="company"
-                      placeholder="e.g., Google, Microsoft"
+                      placeholder="Enter the company name"
                       value={formData.company}
                       onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                      className="pl-10"
+                      className={formErrors.company ? 'border-red-500' : ''}
                     />
+                    {formErrors.company && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.company}</p>
+                    )}
                   </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="position">Position Applied For</Label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                {/* Position Details */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Briefcase className="h-5 w-5" />
+                    Position Details
+                  </h3>
+                  
+                  <div>
+                    <Label htmlFor="position">Job Title *</Label>
                     <Input
                       id="position"
-                      placeholder="e.g., Software Engineer, Product Manager"
+                      placeholder="e.g., Senior Software Engineer"
                       value={formData.position}
                       onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                      className="pl-10"
+                      className={formErrors.position ? 'border-red-500' : ''}
                     />
+                    {formErrors.position && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.position}</p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="jobDescription">Job Description *</Label>
+                    <Textarea
+                      id="jobDescription"
+                      placeholder="Paste or type the job description here. This helps AI ask relevant questions."
+                      value={formData.jobDescription}
+                      onChange={(e) => setFormData(prev => ({ ...prev, jobDescription: e.target.value }))}
+                      className={`min-h-[120px] ${formErrors.jobDescription ? 'border-red-500' : ''}`}
+                    />
+                    {formErrors.jobDescription && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.jobDescription}</p>
+                    )}
                   </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="experience">Experience Level</Label>
-                  <Select
-                    value={formData.experience}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, experience: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="entry">Entry Level (0-2 years)</SelectItem>
-                      <SelectItem value="mid">Mid Level (2-5 years)</SelectItem>
-                      <SelectItem value="senior">Senior Level (5+ years)</SelectItem>
-                      <SelectItem value="lead">Lead/Principal (8+ years)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                {/* Interview Configuration */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Interview Configuration
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="experience">Experience Level</Label>
+                      <Select
+                        value={formData.experience}
+                        onValueChange={(value: 'entry' | 'mid' | 'senior' | 'lead') => 
+                          setFormData(prev => ({ ...prev, experience: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="entry">Entry (0-2 years)</SelectItem>
+                          <SelectItem value="mid">Mid (2-5 years)</SelectItem>
+                          <SelectItem value="senior">Senior (5+ years)</SelectItem>
+                          <SelectItem value="lead">Lead (8+ years)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="interviewType">Interview Type</Label>
+                      <Select
+                        value={formData.interviewType}
+                        onValueChange={(value: 'technical' | 'behavioral' | 'mixed') => 
+                          setFormData(prev => ({ ...prev, interviewType: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="technical">Technical</SelectItem>
+                          <SelectItem value="behavioral">Behavioral</SelectItem>
+                          <SelectItem value="mixed">Mixed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="duration">Duration</Label>
+                      <Select
+                        value={formData.duration}
+                        onValueChange={(value: '15' | '30' | '45' | '60') => 
+                          setFormData(prev => ({ ...prev, duration: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="45">45 minutes</SelectItem>
+                          <SelectItem value="60">60 minutes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -673,40 +889,48 @@ export default function VoiceInterviewPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Progress Header */}
+        {/* Interview Header */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{interviewState.stage}</Badge>
-                <span className="text-sm text-muted-foreground">
-                  Question {interviewState.responses.length + 1}
-                </span>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">Voice Interview in Progress</CardTitle>
+                <CardDescription>
+                  {session?.company} - {session?.position}
+                </CardDescription>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {Math.round(interviewState.progress)}% Complete
+              <div className="text-right">
+                <Badge variant="outline" className="mb-2">{interviewState.stage}</Badge>
+                <p className="text-sm text-muted-foreground">
+                  Question {interviewState.responses.length + 1} of {session?.total_questions || 10}
+                </p>
               </div>
             </div>
-            <Progress value={interviewState.progress} className="h-2" />
+          </CardHeader>
+          <CardContent>
+            <Progress value={interviewState.progress} className="h-3" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {Math.round(interviewState.progress)}% Complete
+            </p>
           </CardContent>
         </Card>
         
         {/* Current Question */}
-        <Card>
+        <Card className="border-primary/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Volume2 className="h-5 w-5" />
-              AI Interviewer
+              <Volume2 className="h-5 w-5 text-primary" />
+              Current Question
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-lg">{interviewState.currentQuestion}</p>
+            <div className="p-6 bg-primary/5 rounded-lg border border-primary/10">
+              <p className="text-lg leading-relaxed">{interviewState.currentQuestion}</p>
             </div>
             {interviewState.isSpeaking && (
-              <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 mt-4 text-sm text-primary">
                 <Volume2 className="h-4 w-4 animate-pulse" />
-                Speaking...
+                AI is speaking...
               </div>
             )}
           </CardContent>
@@ -715,40 +939,80 @@ export default function VoiceInterviewPage() {
         {/* Recording Interface */}
         <Card>
           <CardHeader>
-            <CardTitle>Your Response</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Mic className="h-5 w-5" />
+              Your Response
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {interviewState.currentTranscript && (
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm">{interviewState.currentTranscript}</p>
+          <CardContent className="space-y-6">
+            {/* Live Transcript */}
+            <div className="min-h-[100px] p-4 bg-muted rounded-lg">
+              {interviewState.currentTranscript || interviewState.interimTranscript ? (
+                <div>
+                  <p className="text-sm font-medium mb-2">Live Transcript:</p>
+                  <p className="text-base">
+                    {interviewState.currentTranscript}
+                    <span className="text-muted-foreground">{interviewState.interimTranscript}</span>
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {interviewState.isRecording 
+                    ? 'Listening... Please speak clearly into your microphone'
+                    : 'Click the button below to start recording your response'}
+                </p>
+              )}
+            </div>
+            
+            {/* Audio Level Indicator */}
+            {interviewState.isRecording && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Audio Level</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-100"
+                    style={{ width: `${interviewState.audioLevel}%` }}
+                  />
+                </div>
               </div>
             )}
             
-            <div className="flex justify-center">
+            {/* Recording Button */}
+            <div className="flex flex-col items-center gap-4">
               <Button
                 size="lg"
                 variant={interviewState.isRecording ? "danger" : "primary"}
                 onClick={interviewState.isRecording ? stopRecording : startRecording}
                 disabled={interviewState.isProcessing || interviewState.isSpeaking}
-                className="w-48"
+                className="w-56 h-14 text-lg"
               >
                 {interviewState.isProcessing ? (
                   <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    <Loader2 className="h-6 w-6 mr-2 animate-spin" />
                     Processing...
                   </>
                 ) : interviewState.isRecording ? (
                   <>
-                    <MicOff className="h-5 w-5 mr-2" />
+                    <MicOff className="h-6 w-6 mr-2" />
                     Stop Recording
                   </>
                 ) : (
                   <>
-                    <Mic className="h-5 w-5 mr-2" />
+                    <Mic className="h-6 w-6 mr-2" />
                     Start Recording
                   </>
                 )}
               </Button>
+              
+              {interviewState.isRecording && (
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <div className="h-3 w-3 bg-red-600 rounded-full animate-pulse" />
+                  Recording: {Math.floor(interviewState.recordingDuration / 60)}:{String(interviewState.recordingDuration % 60).padStart(2, '0')}
+                </div>
+              )}
             </div>
             
             {interviewState.isRecording && (
