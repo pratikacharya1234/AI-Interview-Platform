@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSupabase } from "@/components/providers/supabase-provider"
+import { createClient } from "@/lib/supabase/client"
 import {
   UserProfile,
   InterviewConfig,
@@ -21,7 +21,9 @@ import ResultsView from "./components/ResultsView"
 
 export default function AudioInterviewPage() {
   const router = useRouter()
-  const { supabase, user, loading: authLoading } = useSupabase()
+  const [supabase] = useState(() => createClient())
+  const [user, setUser] = useState<any>(null)
+  const [authLoading, setAuthLoading] = useState(true)
   
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -76,19 +78,39 @@ export default function AudioInterviewPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   
-  // Initialize
+  // Check authentication on mount
   useEffect(() => {
-    if (!authLoading && user) {
-      loadUserProfile()
+    checkAuth()
+  }, [])
+  
+  const checkAuth = async () => {
+    try {
+      const { data: { user: authUser }, error } = await supabase.auth.getUser()
+      
+      if (error || !authUser) {
+        console.log('No authenticated user, redirecting to signin')
+        router.push('/auth/signin?redirect=/interview/audio')
+        return
+      }
+      
+      setUser(authUser)
+      setAuthLoading(false)
+      
+      // Load profile after auth check
+      loadUserProfile(authUser)
       initializeSpeechRecognition()
-    } else if (!authLoading && !user) {
+    } catch (error) {
+      console.error('Auth check error:', error)
       router.push('/auth/signin?redirect=/interview/audio')
     }
-    
+  }
+  
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       cleanup()
     }
-  }, [authLoading, user])
+  }, [])
   
   const cleanup = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -109,12 +131,11 @@ export default function AudioInterviewPage() {
     }
   }
   
-  const loadUserProfile = async () => {
+  const loadUserProfile = async (authUser?: any) => {
     try {
-      // Use the user from context which is already authenticated
-      if (!user) {
-        console.log('No authenticated user, redirecting to signin')
-        router.push('/auth/signin?redirect=/interview/audio')
+      const currentUser = authUser || user
+      if (!currentUser) {
+        console.log('No user available')
         return
       }
       
@@ -122,14 +143,14 @@ export default function AudioInterviewPage() {
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .single()
       
       // Fetch user attempts with error handling
       const { data: attempts, error: attemptsError } = await supabase
         .from('practice_attempts')
         .select('question_id, score')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
       
       if (attemptsError && attemptsError.code !== '42P01') {
         console.error('Error fetching attempts:', attemptsError)
@@ -144,10 +165,10 @@ export default function AudioInterviewPage() {
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || '',
-            username: user.email?.split('@')[0] || 'user',
+            id: currentUser.id,
+            email: currentUser.email,
+            full_name: currentUser.user_metadata?.full_name || '',
+            username: currentUser.email?.split('@')[0] || 'user',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -159,16 +180,16 @@ export default function AudioInterviewPage() {
         }
         
         setUserProfile({
-          id: user.id,
-          name: newProfile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          email: user.email || '',
-          avatar: newProfile?.avatar_url || user.user_metadata?.avatar_url
+          id: currentUser.id,
+          name: newProfile?.full_name || currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email || '',
+          avatar: newProfile?.avatar_url || currentUser.user_metadata?.avatar_url
         })
       } else {
         setUserProfile({
-          id: user.id,
-          name: profile.full_name || profile.username || user.email?.split('@')[0] || 'User',
-          email: user.email || profile.email || '',
+          id: currentUser.id,
+          name: profile.full_name || profile.username || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email || profile.email || '',
           avatar: profile.avatar_url
         })
       }
