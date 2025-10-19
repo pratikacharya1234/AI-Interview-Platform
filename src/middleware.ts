@@ -3,6 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware for static files and API routes
+  if (
+    request.nextUrl.pathname.startsWith('/_next') ||
+    request.nextUrl.pathname.startsWith('/api') ||
+    request.nextUrl.pathname.includes('.')
+  ) {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -56,10 +65,21 @@ export async function middleware(request: NextRequest) {
   )
 
   // Check for NextAuth session first
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  let token = null
+  try {
+    token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  } catch (error) {
+    console.log('NextAuth token check skipped:', error)
+  }
   
   // Then check Supabase session
-  const { data: { user }, error } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    user = data?.user
+  } catch (error) {
+    console.log('Supabase auth check error:', error)
+  }
   
   // User is authenticated if either NextAuth or Supabase session exists
   const isAuthenticated = !!(token || user)
@@ -68,7 +88,7 @@ export async function middleware(request: NextRequest) {
   const protectedPaths = [
     '/dashboard',
     '/interview/audio',
-    '/interview/video',
+    '/interview/video', 
     '/interview/text',
     '/practice',
     '/profile',
@@ -76,10 +96,26 @@ export async function middleware(request: NextRequest) {
     '/analytics',
     '/reports'
   ]
+  
+  // Allow these paths without authentication
+  const publicPaths = [
+    '/',
+    '/auth',
+    '/api'
+  ]
+  
+  const isPublicPath = publicPaths.some(path => 
+    request.nextUrl.pathname.startsWith(path)
+  )
 
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   )
+  
+  // If it's a public path, allow access
+  if (isPublicPath) {
+    return response
+  }
 
   // If accessing protected route without auth, redirect to signin
   if (isProtectedPath && !isAuthenticated) {
