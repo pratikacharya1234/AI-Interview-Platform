@@ -69,10 +69,10 @@ const navigation: NavItem[] = [
         icon: MessageSquare
       },
       {
-        id: 'voice-interview',
-        label: 'Voice Interview',
-        href: '/interview/conversational',
-        icon: Video
+        id: 'audio-interview',
+        label: 'Audio Interview',
+        href: '/interview/audio',
+        icon: MessageSquare
       },
       {
         id: 'video-interview',

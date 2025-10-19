@@ -58,8 +58,11 @@ export default function InterviewPage() {
       router.push(`/interview/video?id=${interview.id}`)
     } else if (interview.type === 'text') {
       router.push(`/interview/text?id=${interview.id}`)
+    } else if (interview.type === 'audio') {
+      router.push(`/interview/audio?id=${interview.id}`)
     } else {
-      router.push(`/interview/conversational?id=${interview.id}`)
+      // Default to text interview for unknown types
+      router.push(`/interview/text?id=${interview.id}`)
     }
   }
 

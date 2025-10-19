@@ -78,12 +78,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     },
     {
       id: 'nav-voice-interview',
-      title: 'Voice Interview',
-      description: 'Start a voice interview',
-      icon: Video,
-      action: () => router.push('/interview/conversational'),
+      title: 'Audio Interview',
+      description: 'Start an audio interview',
+      icon: MessageSquare,
+      action: () => router.push('/interview/audio'),
       category: 'Navigation',
-      keywords: ['voice', 'audio', 'speak']
+      keywords: ['voice', 'audio', 'speak', 'interview']
     },
     {
       id: 'nav-video-interview',

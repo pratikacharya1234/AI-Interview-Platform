@@ -64,24 +64,24 @@ const navigation: NavItem[] = [
         icon: Plus
       },
       {
-        id: 'text-interview',
-        label: 'Text Based',
-        href: '/interview/text',
-        icon: MessageSquare
+        id: 'audio-interview',
+        label: 'Audio Interview',
+        href: '/interview/audio',
+        icon: MessageSquare,
+        badge: 'New',
+        badgeType: 'success'
       },
       {
-        id: 'voice-interview',
-        label: 'Voice Interview',
-        href: '/interview/conversational',
-        icon: Video
+        id: 'text-interview',
+        label: 'Text Interview',
+        href: '/interview/text',
+        icon: FileText
       },
       {
         id: 'video-interview',
         label: 'Video Interview',
         href: '/interview/video',
-        icon: Video,
-        badge: 'Beta',
-        badgeType: 'warning'
+        icon: Video
       },
       {
         id: 'history',
