@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { useSupabase } from "@/components/providers/supabase-provider"
 import {
   UserProfile,
   InterviewConfig,
@@ -21,7 +21,7 @@ import ResultsView from "./components/ResultsView"
 
 export default function AudioInterviewPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const { supabase, user, loading: authLoading } = useSupabase()
   
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -78,13 +78,17 @@ export default function AudioInterviewPage() {
   
   // Initialize
   useEffect(() => {
-    loadUserProfile()
-    initializeSpeechRecognition()
+    if (!authLoading && user) {
+      loadUserProfile()
+      initializeSpeechRecognition()
+    } else if (!authLoading && !user) {
+      router.push('/auth/signin?redirect=/interview/audio')
+    }
     
     return () => {
       cleanup()
     }
-  }, [])
+  }, [authLoading, user])
   
   const cleanup = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -107,11 +111,9 @@ export default function AudioInterviewPage() {
   
   const loadUserProfile = async () => {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError || !user) {
-        console.error('Auth error:', authError)
-        // Redirect to login if not authenticated
+      // Use the user from context which is already authenticated
+      if (!user) {
+        console.log('No authenticated user, redirecting to signin')
         router.push('/auth/signin?redirect=/interview/audio')
         return
       }
@@ -582,6 +584,23 @@ export default function AudioInterviewPage() {
       confidenceLevel: 0,
       engagementScore: 0
     })
+  }
+  
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // Redirect if not authenticated
+  if (!user) {
+    return null // Middleware will handle redirect
   }
   
   // Render based on current view

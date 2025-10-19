@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,7 +43,7 @@ interface Question {
 
 export default function PracticePage() {
   const router = useRouter()
-  const supabase = createClient()
+  const { supabase, user, loading: authLoading } = useSupabase()
   const [loading, setLoading] = useState(true)
   const [questions, setQuestions] = useState<Question[]>([])
   const [categories, setCategories] = useState<any[]>([])
@@ -51,24 +51,25 @@ export default function PracticePage() {
   const [selectedCategory, setSelectedCategory] = useState('All Categories')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
   const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([])
-  const [user, setUser] = useState<any>(null)
 
   // Load user and questions from Supabase
   useEffect(() => {
-    loadData()
-  }, [])
+    if (!authLoading && user) {
+      loadData()
+    } else if (!authLoading && !user) {
+      router.push('/auth/signin?redirect=/practice')
+    }
+  }, [authLoading, user])
   
   const loadData = async () => {
     try {
       setLoading(true)
       
-      // Check authentication
-      const { data: { user } } = await supabase.auth.getUser()
+      // User is already available from context
       if (!user) {
-        router.push('/auth/signin?redirect=/practice')
+        console.log('No user in loadData')
         return
       }
-      setUser(user)
       
       // Fetch questions from Supabase
       const { data: questionsData, error: questionsError } = await supabase
