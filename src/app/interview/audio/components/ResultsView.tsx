@@ -81,7 +81,7 @@ export default function ResultsView({
           </div>
           <h1 className="text-4xl font-bold mb-2">Interview Complete!</h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Here's your comprehensive performance analysis
+            Here&apos;s your comprehensive performance analysis
           </p>
         </div>
 

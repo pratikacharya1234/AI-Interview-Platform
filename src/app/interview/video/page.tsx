@@ -313,7 +313,7 @@ export default function VideoInterviewPage() {
                   {!interviewStarted && (
                     <div className="rounded-lg bg-muted p-4 text-center">
                       <p className="text-sm text-muted-foreground">
-                        Click "Start Interview" to begin your AI-powered video interview session
+                        Click &quot;Start Interview&quot; to begin your AI-powered video interview session
                       </p>
                     </div>
                   )}
