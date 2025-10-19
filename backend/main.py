@@ -27,6 +27,7 @@ from services.speech_to_text import SpeechToTextService
 from services.ai_interviewer import AIInterviewerService
 from services.database import DatabaseService
 from models.interview import Interview, InterviewQuestion, InterviewResponse, FeedbackSummary
+from routes import voice_interview
 
 # Load environment variables
 load_dotenv()
@@ -396,6 +397,9 @@ async def health_check():
             "ai": ai_interviewer.is_available()
         }
     }
+
+# Include voice interview routes
+app.include_router(voice_interview.router)
 
 if __name__ == "__main__":
     uvicorn.run(
