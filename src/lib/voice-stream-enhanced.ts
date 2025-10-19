@@ -31,9 +31,9 @@ export class EnhancedVoiceStreamManager {
         await this.audioContext.resume()
       }
       
-      console.log('✅ AudioContext initialized:', this.audioContext.state)
+      console.log('AudioContext initialized:', this.audioContext.state)
     } catch (error) {
-      console.error('❌ AudioContext initialization failed:', error)
+      console.error('AudioContext initialization failed:', error)
       throw error
     }
   }
@@ -72,10 +72,10 @@ export class EnhancedVoiceStreamManager {
       }
 
       this.mediaRecorder.start(100) // Collect data every 100ms
-      console.log('🎤 Recording started')
+      console.log('Recording started')
 
     } catch (error) {
-      console.error('❌ Failed to start recording:', error)
+      console.error('Failed to start recording:', error)
       throw error
     }
   }
@@ -100,7 +100,7 @@ export class EnhancedVoiceStreamManager {
           this.recordingStream = null
         }
 
-        console.log('🎤 Recording stopped, blob size:', audioBlob.size)
+        console.log('Recording stopped, blob size:', audioBlob.size)
         resolve(audioBlob)
       }
 
@@ -114,7 +114,7 @@ export class EnhancedVoiceStreamManager {
    */
   async transcribeAudio(audioBlob: Blob): Promise<string> {
     try {
-      console.log('🎯 Transcribing audio with Gemini...')
+      console.log('Transcribing audio with Gemini...')
 
       const formData = new FormData()
       formData.append('audio', audioBlob, 'recording.webm')
@@ -132,14 +132,14 @@ export class EnhancedVoiceStreamManager {
       const data = await response.json()
       
       if (data.warning) {
-        console.warn('⚠️', data.warning)
+        console.warn('Warning:', data.warning)
       }
 
-      console.log('✅ Transcription:', data.transcript)
+      console.log('Transcription:', data.transcript)
       return data.transcript || ''
 
     } catch (error) {
-      console.error('❌ Transcription error:', error)
+      console.error('Transcription error:', error)
       throw error
     }
   }
@@ -172,11 +172,11 @@ export class EnhancedVoiceStreamManager {
       }
 
       const data = await response.json()
-      console.log('✅ AI response received')
+      console.log('AI response received')
       return data.response
 
     } catch (error) {
-      console.error('❌ AI response error:', error)
+      console.error('AI response error:', error)
       throw error
     }
   }
@@ -186,7 +186,7 @@ export class EnhancedVoiceStreamManager {
    */
   async speakText(text: string, voiceId: string = 'Rachel'): Promise<void> {
     try {
-      console.log('🔊 Generating speech with ElevenLabs...')
+      console.log('Generating speech with ElevenLabs...')
 
       // Initialize audio context if needed
       await this.initializeAudio()
@@ -204,7 +204,7 @@ export class EnhancedVoiceStreamManager {
       })
 
       if (!response.ok) {
-        console.warn('⚠️ ElevenLabs failed, using fallback')
+        console.warn('ElevenLabs failed, using fallback')
         this.fallbackToWebSpeech(text)
         return
       }
@@ -214,10 +214,10 @@ export class EnhancedVoiceStreamManager {
       
       // Play audio
       await this.playAudioBuffer(audioData)
-      console.log('✅ Speech playback complete')
+      console.log('Speech playback complete')
 
     } catch (error) {
-      console.error('❌ Speech generation error:', error)
+      console.error('Speech generation error:', error)
       // Fallback to browser TTS
       this.fallbackToWebSpeech(text)
     }
@@ -259,7 +259,7 @@ export class EnhancedVoiceStreamManager {
       })
       
     } catch (error) {
-      console.error('❌ Error decoding audio:', error)
+      console.error('Error decoding audio:', error)
       throw error
     }
   }
@@ -269,7 +269,7 @@ export class EnhancedVoiceStreamManager {
    */
   private fallbackToWebSpeech(text: string): void {
     if ('speechSynthesis' in window) {
-      console.log('🔄 Using browser TTS as fallback')
+      console.log('Using browser TTS as fallback')
       
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.rate = 0.9
@@ -329,7 +329,7 @@ export class EnhancedVoiceStreamManager {
       return { transcript, aiResponse }
       
     } catch (error) {
-      console.error('❌ Voice interaction error:', error)
+      console.error('Voice interaction error:', error)
       throw error
     }
   }

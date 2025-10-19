@@ -445,7 +445,7 @@ export default function AIInterviewComponent() {
           }
         }
 
-        console.log('📤 Sending interview data to API...')
+        console.log('Sending interview data to API...')
         
         const response = await fetch('/api/interview/complete', {
           method: 'POST',
@@ -454,22 +454,22 @@ export default function AIInterviewComponent() {
         })
 
         const data = await response.json()
-        console.log('📥 API Response:', data)
+        console.log('API Response:', data)
 
         if (response.ok || data.success) {
-          console.log('✅ Interview saved successfully!')
-          console.log('📊 Saved with ID:', data.interviewId)
-          console.log('💾 Saved at:', data.savedAt)
+          console.log('Interview saved successfully!')
+          console.log('Saved with ID:', data.interviewId)
+          console.log('Saved at:', data.savedAt)
           // Store the saved interview ID for future reference
           if (typeof window !== 'undefined') {
             window.localStorage.setItem('lastInterviewId', data.interviewId)
           }
         } else {
-          console.error('⚠️ Failed to save interview:', data.error || data.details)
+          console.error('Failed to save interview:', data.error || data.details)
           // Still continue to show results even if save failed
         }
       } catch (error) {
-        console.error('❌ Error saving interview:', error)
+        console.error('Error saving interview:', error)
         // Don't throw error, let user see their results
       }
     },
@@ -528,7 +528,7 @@ export default function AIInterviewComponent() {
         {/* Header */}
         <Card className="p-8 text-center">
           <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold mb-4">🎉 Interview Completed!</h2>
+          <h2 className="text-3xl font-bold mb-4">Interview Completed!</h2>
           <p className="text-gray-600 mb-6">Here&apos;s your comprehensive interview summary</p>
         </Card>
 

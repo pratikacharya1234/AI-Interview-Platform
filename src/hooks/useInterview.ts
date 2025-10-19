@@ -173,7 +173,7 @@ export function useInterview(options: UseInterviewOptions = {}) {
     setState(prev => ({ ...prev, isLoading: true }))
 
     try {
-      console.log('🎯 HACKATHON: Completing interview with enhanced features...')
+      console.log('Completing interview with enhanced features...')
       
       // 1. Generate feedback
       const feedbackResponse = await fetch('/api/interview/feedback', {

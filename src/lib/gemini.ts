@@ -103,13 +103,13 @@ Focus on real-world scenarios and practical problem-solving skills.
       // Parse JSON response
       const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, ''))
       
-      console.log('✅ Questions generated successfully with Gemini AI!')
+      console.log('Questions generated successfully with Gemini AI!')
       return parsed.questions.map((q: any, index: number) => ({
         id: `q_${Date.now()}_${index}`,
         ...q
       }))
     } catch (error) {
-      console.error('⚠️ Gemini AI failed, using fallback questions:', error)
+      console.error('Gemini AI failed, using fallback questions:', error)
       // Fallback questions
       return this.getFallbackQuestions(position, questionTypes[0], count)
     }
@@ -163,7 +163,7 @@ Be constructive, specific, and encouraging in your feedback.
       
       const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, ''))
       
-      console.log('✅ Response analyzed successfully with Gemini AI!')
+      console.log('Response analyzed successfully with Gemini AI!')
       return {
         questionId: question.id,
         question: question.question,
@@ -171,7 +171,7 @@ Be constructive, specific, and encouraging in your feedback.
         ...parsed
       }
     } catch (error) {
-      console.error('⚠️ Gemini AI analysis failed, using smart fallback:', error)
+      console.error('Gemini AI analysis failed, using smart fallback:', error)
       
       // Smart fallback analysis based on response characteristics
       return this.generateFallbackAnalysis(question, userResponse, context)
@@ -279,10 +279,10 @@ Make the feedback constructive, professional, and actionable.
     try {
       const result = await this.model.generateContent(prompt)
       const response = await result.response
-      console.log('✅ Overall feedback generated successfully with Gemini AI!')
+      console.log('Overall feedback generated successfully with Gemini AI!')
       return response.text()
     } catch (error) {
-      console.error('⚠️ Gemini AI feedback generation failed, using fallback:', error)
+      console.error('Gemini AI feedback generation failed, using fallback:', error)
       return this.generateFallbackFeedback(session)
     }
   }

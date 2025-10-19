@@ -161,7 +161,7 @@ export default function VideoInterviewNew() {
 
         await new Promise<void>((resolve) => {
           source.onended = () => {
-            console.log('✅ AI finished speaking')
+            console.log('AI finished speaking')
             resolve()
           }
           source.start()
@@ -243,7 +243,7 @@ export default function VideoInterviewNew() {
         }
         
         recognition.start()
-        console.log('🎤 User can speak now (Web Speech API)')
+        console.log('User can speak now (Web Speech API)')
       } else {
         // Fallback to MediaRecorder
         console.warn('Web Speech API not available, using MediaRecorder fallback')
@@ -307,7 +307,7 @@ export default function VideoInterviewNew() {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        console.log('🎤 Recording stopped, blob size:', audioBlob.size)
+        console.log('Recording stopped, blob size:', audioBlob.size)
         resolve(audioBlob)
       }
 
@@ -358,7 +358,7 @@ export default function VideoInterviewNew() {
         return
       }
 
-      console.log('✅ User said:', userTranscript)
+      console.log('User said:', userTranscript)
 
       // Add user message
       const userMessage: Message = {
@@ -400,7 +400,7 @@ export default function VideoInterviewNew() {
       const aiData = await aiResponse.json()
       const aiText = aiData.response
 
-      console.log('✅ AI responds:', aiText)
+      console.log('AI responds:', aiText)
 
       // Add AI message
       const aiMessage: Message = {

@@ -13,9 +13,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { InterviewSummaryView } from "@/components/interview/InterviewSummaryView"
-import { TranscriptPanel } from "@/components/interview/TranscriptPanel"
-import { EvaluationCard } from "@/components/interview/EvaluationCard"
+// Components will be inlined for now
 import type { 
   InterviewSession, 
   Transcript, 
@@ -52,7 +50,7 @@ export default function LiveInterviewPage() {
   
   // Timer
   const startTimeRef = useRef<number>(0)
-  const durationIntervalRef = useRef<NodeJS.Timeout>()
+  const durationIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
   
   // Initialize interview session
   useEffect(() => {
@@ -409,7 +407,48 @@ export default function LiveInterviewPage() {
   
   // Render interview summary
   if (session?.status === 'completed' && summary) {
-    return <InterviewSummaryView session={session} summary={summary} />
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto flex items-center justify-between px-6 py-4">
+            <Link href="/" className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground">
+              <ArrowLeft className="h-5 w-5" />
+              <span>Back to Home</span>
+            </Link>
+            <h1 className="text-xl font-bold">Interview Complete</h1>
+            <div className="w-24" />
+          </div>
+        </header>
+        
+        <div className="container mx-auto px-6 py-8 max-w-4xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                Interview Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center">
+                <div className="text-5xl font-bold">
+                  {summary.overall_performance}%
+                </div>
+                <p className="text-muted-foreground mt-2">Overall Performance</p>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button onClick={() => router.push(`/api/report/${session.interview_id}`)} className="flex-1">
+                  View Full Report
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/interview')} className="flex-1">
+                  Start New Interview
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
   
   // Main interview interface
@@ -519,7 +558,7 @@ export default function LiveInterviewPage() {
                     <Button 
                       onClick={endInterview} 
                       size="lg" 
-                      variant="destructive"
+                      variant="danger"
                       className="ml-4"
                       disabled={loading}
                     >
@@ -530,14 +569,73 @@ export default function LiveInterviewPage() {
                 </div>
                 
                 {currentAIResponse && (
-                  <EvaluationCard evaluation={currentAIResponse.evaluation_json} />
+                  <Card className="bg-muted">
+                    <CardContent className="pt-4">
+                      <h4 className="font-semibold mb-3">Real-time Evaluation</h4>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">
+                          {currentAIResponse.evaluation_json.overall_score}%
+                        </div>
+                        <p className="text-xs text-muted-foreground">Current Score</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </CardContent>
             </Card>
           </div>
           
           <div className="space-y-4">
-            <TranscriptPanel transcripts={transcripts} />
+            <Card className="h-[600px] flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Live Transcript
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto">
+                <div className="space-y-3">
+                  {transcripts.length === 0 && (
+                    <div className="text-center text-muted-foreground py-8">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">Transcript will appear here once the interview starts</p>
+                    </div>
+                  )}
+                  
+                  {transcripts.map((transcript) => (
+                    <div
+                      key={transcript.id}
+                      className={`p-3 rounded-lg ${
+                        transcript.speaker === 'interviewer' 
+                          ? 'bg-primary/10 border-l-4 border-primary' 
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {transcript.speaker === 'interviewer' ? (
+                          <Brain className="h-4 w-4 mt-0.5 text-primary" />
+                        ) : (
+                          <User className="h-4 w-4 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold">
+                              {transcript.speaker === 'interviewer' ? 'AI Interviewer' : 'You'}
+                            </span>
+                            {transcript.confidence < 1 && (
+                              <span className="text-xs text-muted-foreground">
+                                {Math.round(transcript.confidence * 100)}% confident
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm leading-relaxed">{transcript.text}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
             
             {error && (
               <Alert variant="destructive">
