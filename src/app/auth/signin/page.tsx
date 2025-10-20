@@ -125,18 +125,23 @@ export default function SignIn() {
     setError(null)
     
     try {
+      // Use a valid email domain for demo
+      const demoEmail = 'demo.user@aiinterview.app'
+      const demoPassword = 'DemoPass123!'
+      
       // First try to sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: 'demo@example.com',
-        password: 'demo123456'
+        email: demoEmail,
+        password: demoPassword
       })
 
       if (signInError) {
         // If demo account doesn't exist, create it
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: 'demo@example.com',
-          password: 'demo123456',
+          email: demoEmail,
+          password: demoPassword,
           options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
             data: {
               full_name: 'Demo User',
             }
@@ -145,23 +150,27 @@ export default function SignIn() {
 
         if (signUpError) throw signUpError
 
-        // Try to sign in again after creating
-        const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
-          email: 'demo@example.com',
-          password: 'demo123456'
-        })
+        // For localhost, try to sign in immediately
+        if (window.location.hostname === 'localhost' || signUpData.user?.email_confirmed_at) {
+          const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
+            email: demoEmail,
+            password: demoPassword
+          })
 
-        if (newSignInError) throw newSignInError
-        
-        if (newSignInData.user) {
-          router.push(searchParams.get('redirect') || '/dashboard')
+          if (!newSignInError && newSignInData.user) {
+            router.push(searchParams.get('redirect') || '/dashboard')
+            return
+          }
         }
+        
+        setError('Demo account created! Please check your email to verify, or sign in with your own account.')
+        setIsSignUp(false)
       } else if (signInData.user) {
         router.push(searchParams.get('redirect') || '/dashboard')
       }
     } catch (error: any) {
       console.error('Demo login error:', error)
-      setError('Demo login failed. Please create a new account.')
+      setError(error.message || 'Demo login failed. Please create your own account using the form above.')
     } finally {
       setIsLoading(false)
     }
@@ -264,7 +273,14 @@ export default function SignIn() {
                   onClick={handleDemoLogin}
                   disabled={isLoading}
                 >
-                  Try Demo Account
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Setting up demo...
+                    </>
+                  ) : (
+                    'Try Demo Account'
+                  )}
                 </Button>
 
                 <Button
