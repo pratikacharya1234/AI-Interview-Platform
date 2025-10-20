@@ -74,13 +74,10 @@ export function LandingNavigation() {
               <div className="flex items-center space-x-4">
                 <Button 
                   variant="outline"
-                  onClick={() => signIn('github')}
+                  onClick={() => signIn('github', { callbackUrl: '/dashboard' })}
                 >
-                  Sign In
+                  Sign In with GitHub
                 </Button>
-                <Link href="/dashboard">
-                  <Button>Get Started Free</Button>
-                </Link>
               </div>
             )}
           </div>
@@ -131,18 +128,14 @@ export function LandingNavigation() {
                 ) : (
                   <div className="space-y-2">
                     <Button 
-                      variant="outline" 
                       className="w-full"
                       onClick={() => {
-                        signIn('github')
+                        signIn('github', { callbackUrl: '/dashboard' })
                         setIsMenuOpen(false)
                       }}
                     >
-                      Sign In
+                      Sign In with GitHub
                     </Button>
-                    <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
-                      <Button className="w-full">Get Started Free</Button>
-                    </Link>
                   </div>
                 )}
               </div>

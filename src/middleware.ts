@@ -1,4 +1,3 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
@@ -12,77 +11,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
-    }
-  )
-
-  // Check for NextAuth session first
+  // Check for NextAuth session
   let token = null
   try {
     token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
   } catch (error) {
-    console.log('NextAuth token check skipped:', error)
+    console.log('NextAuth token check error:', error)
   }
   
-  // Then check Supabase session
-  let user = null
-  try {
-    const { data, error } = await supabase.auth.getUser()
-    user = data?.user
-  } catch (error) {
-    console.log('Supabase auth check error:', error)
-  }
-  
-  // User is authenticated if either NextAuth or Supabase session exists
-  const isAuthenticated = !!(token || user)
+  // User is authenticated if NextAuth session exists
+  const isAuthenticated = !!token
 
   // Protected routes that require authentication
   const protectedPaths = [
@@ -135,7 +73,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Allow all other paths (public pages)
-  return response
+  return NextResponse.next()
 }
 
 export const config = {
