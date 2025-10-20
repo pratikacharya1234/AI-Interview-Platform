@@ -90,49 +90,51 @@ export async function middleware(request: NextRequest) {
     '/interview/audio',
     '/interview/video', 
     '/interview/text',
+    '/interview/voice',
+    '/interview/history',
+    '/interview/feedback',
+    '/interview/performance',
     '/practice',
     '/profile',
     '/settings',
     '/analytics',
-    '/reports'
+    '/reports',
+    '/preferences',
+    '/achievements',
+    '/ai/coach',
+    '/ai/feedback',
+    '/ai/prep',
+    '/mentor',
+    '/mock',
+    '/coding',
+    '/learning'
   ]
   
-  // Allow these paths without authentication
-  const publicPaths = [
-    '/',
-    '/auth',
-    '/api'
-  ]
-  
-  const isPublicPath = publicPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
-  )
-
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   )
   
-  // If it's a public path, allow access
-  if (isPublicPath) {
-    return response
-  }
-
   // If accessing protected route without auth, redirect to login
   if (isProtectedPath && !isAuthenticated) {
-    console.log('No authenticated user, redirecting to signin')
+    console.log('No authenticated user, redirecting to login')
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/login'
     redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If user is authenticated and trying to access login, redirect to dashboard
-  if (isAuthenticated && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname.startsWith('/auth/signin'))) {
+  // If user is authenticated and trying to access login/signin, redirect to dashboard
+  if (isAuthenticated && (
+    request.nextUrl.pathname === '/login' || 
+    request.nextUrl.pathname === '/signin' ||
+    request.nextUrl.pathname.startsWith('/auth/signin')
+  )) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Allow all other paths (public pages)
   return response
 }
 
