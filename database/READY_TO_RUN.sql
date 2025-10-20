@@ -1,14 +1,9 @@
--- Production-Ready Voice Interview Database Schema
--- This schema supports the complete voice interview system with Vapi integration
+-- ✅ FIXED: Ready to Run in Supabase SQL Editor
+-- This schema is corrected to reference auth.users (Supabase's auth table)
+-- Copy and paste this entire file into Supabase SQL Editor and click "Run"
 
--- Enable UUID extension if not already enabled
+-- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Drop existing tables if they exist (be careful in production!)
--- Comment these out after initial setup
--- DROP TABLE IF EXISTS interview_feedback CASCADE;
--- DROP TABLE IF EXISTS interview_responses CASCADE;
--- DROP TABLE IF EXISTS interview_sessions CASCADE;
 
 -- Interview Sessions Table
 CREATE TABLE IF NOT EXISTS interview_sessions (
@@ -16,52 +11,42 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
     user_id UUID NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    interview_type VARCHAR(50) NOT NULL DEFAULT 'voice', -- voice, text, video
-    status VARCHAR(50) NOT NULL DEFAULT 'pending', -- pending, in_progress, completed, cancelled
+    interview_type VARCHAR(50) NOT NULL DEFAULT 'voice',
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
     
-    -- Interview metadata
     metadata JSONB DEFAULT '{}',
     questions JSONB DEFAULT '[]',
     
-    -- Timing
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
     duration_minutes INTEGER,
     
-    -- Scoring
     overall_score DECIMAL(5,2),
     feedback_id UUID,
     
-    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    -- Indexes
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    -- ✅ FIXED: References auth.users (Supabase's auth table)
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
--- Interview Responses Table (stores conversation transcript)
+-- Interview Responses Table
 CREATE TABLE IF NOT EXISTS interview_responses (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     interview_id UUID NOT NULL,
     
-    -- Message content
     role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     content TEXT NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    -- Analysis
     confidence DECIMAL(3,2),
     stage VARCHAR(50),
     analysis JSONB,
-    
-    -- Order
     sequence_number INTEGER,
     
-    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    -- Foreign key
     CONSTRAINT fk_interview FOREIGN KEY (interview_id) REFERENCES interview_sessions(id) ON DELETE CASCADE
 );
 
@@ -71,41 +56,32 @@ CREATE TABLE IF NOT EXISTS interview_feedback (
     interview_id UUID NOT NULL,
     user_id UUID NOT NULL,
     
-    -- Overall evaluation
     overall_score DECIMAL(5,2) NOT NULL,
     hiring_recommendation TEXT,
     
-    -- Detailed scores (JSON array of category scores)
     scores JSONB NOT NULL DEFAULT '[]',
-    
-    -- Feedback content
     strengths JSONB DEFAULT '[]',
     improvements JSONB DEFAULT '[]',
     detailed_feedback TEXT,
     recommendations JSONB DEFAULT '[]',
     
-    -- Interview data
     transcript TEXT,
     duration_seconds INTEGER,
-    
-    -- Metadata
     metadata JSONB DEFAULT '{}',
     
-    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    -- Foreign keys
     CONSTRAINT fk_interview_feedback FOREIGN KEY (interview_id) REFERENCES interview_sessions(id) ON DELETE CASCADE,
+    -- ✅ FIXED: References auth.users
     CONSTRAINT fk_user_feedback FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
--- Voice Analytics Table (optional, for detailed voice analysis)
+-- Voice Analytics Table
 CREATE TABLE IF NOT EXISTS voice_analytics (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     interview_id UUID NOT NULL,
     
-    -- Voice metrics
     clarity_score DECIMAL(5,2),
     pace_score DECIMAL(5,2),
     volume_score DECIMAL(5,2),
@@ -114,17 +90,13 @@ CREATE TABLE IF NOT EXISTS voice_analytics (
     tonal_variation DECIMAL(5,2),
     articulation_score DECIMAL(5,2),
     
-    -- Detailed analysis
     analysis JSONB,
-    
-    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    -- Foreign key
     CONSTRAINT fk_interview_analytics FOREIGN KEY (interview_id) REFERENCES interview_sessions(id) ON DELETE CASCADE
 );
 
--- Create indexes for better performance
+-- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_user_id ON interview_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_status ON interview_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_created_at ON interview_sessions(created_at DESC);
@@ -141,7 +113,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for updated_at (drop first if they exist)
+-- Create triggers (drop first if they exist)
 DROP TRIGGER IF EXISTS update_interview_sessions_updated_at ON interview_sessions;
 DROP TRIGGER IF EXISTS update_interview_feedback_updated_at ON interview_feedback;
 
@@ -155,13 +127,18 @@ CREATE TRIGGER update_interview_feedback_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- Row Level Security (RLS) Policies
+-- Enable Row Level Security
 ALTER TABLE interview_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interview_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interview_feedback ENABLE ROW LEVEL SECURITY;
 ALTER TABLE voice_analytics ENABLE ROW LEVEL SECURITY;
 
--- Policies for interview_sessions
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own interview sessions" ON interview_sessions;
+DROP POLICY IF EXISTS "Users can create their own interview sessions" ON interview_sessions;
+DROP POLICY IF EXISTS "Users can update their own interview sessions" ON interview_sessions;
+
+-- RLS Policies for interview_sessions
 CREATE POLICY "Users can view their own interview sessions" 
     ON interview_sessions FOR SELECT 
     USING (auth.uid() = user_id);
@@ -174,7 +151,11 @@ CREATE POLICY "Users can update their own interview sessions"
     ON interview_sessions FOR UPDATE 
     USING (auth.uid() = user_id);
 
--- Policies for interview_responses
+-- Drop existing policies for interview_responses
+DROP POLICY IF EXISTS "Users can view responses for their interviews" ON interview_responses;
+DROP POLICY IF EXISTS "Users can create responses for their interviews" ON interview_responses;
+
+-- RLS Policies for interview_responses
 CREATE POLICY "Users can view responses for their interviews" 
     ON interview_responses FOR SELECT 
     USING (
@@ -195,7 +176,11 @@ CREATE POLICY "Users can create responses for their interviews"
         )
     );
 
--- Policies for interview_feedback
+-- Drop existing policies for interview_feedback
+DROP POLICY IF EXISTS "Users can view their own feedback" ON interview_feedback;
+DROP POLICY IF EXISTS "Users can create their own feedback" ON interview_feedback;
+
+-- RLS Policies for interview_feedback
 CREATE POLICY "Users can view their own feedback" 
     ON interview_feedback FOR SELECT 
     USING (auth.uid() = user_id);
@@ -204,7 +189,10 @@ CREATE POLICY "Users can create their own feedback"
     ON interview_feedback FOR INSERT 
     WITH CHECK (auth.uid() = user_id);
 
--- Policies for voice_analytics
+-- Drop existing policies for voice_analytics
+DROP POLICY IF EXISTS "Users can view analytics for their interviews" ON voice_analytics;
+
+-- RLS Policies for voice_analytics
 CREATE POLICY "Users can view analytics for their interviews" 
     ON voice_analytics FOR SELECT 
     USING (
@@ -215,18 +203,13 @@ CREATE POLICY "Users can view analytics for their interviews"
         )
     );
 
--- Sample data for testing (optional - remove in production)
--- INSERT INTO interview_sessions (user_id, title, description, interview_type, status)
--- VALUES 
---     (auth.uid(), 'Senior Developer Interview', 'Technical interview for senior position', 'voice', 'pending');
-
--- Grant permissions (adjust based on your Supabase setup)
+-- Grant permissions
 GRANT ALL ON interview_sessions TO authenticated;
 GRANT ALL ON interview_responses TO authenticated;
 GRANT ALL ON interview_feedback TO authenticated;
 GRANT ALL ON voice_analytics TO authenticated;
 
--- Function to get interview statistics for a user
+-- Helper function: Get user interview statistics
 CREATE OR REPLACE FUNCTION get_user_interview_stats(p_user_id UUID)
 RETURNS TABLE (
     total_interviews INTEGER,
@@ -248,7 +231,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to get recent interviews with feedback
+-- Helper function: Get recent interviews with feedback
 CREATE OR REPLACE FUNCTION get_recent_interviews_with_feedback(
     p_user_id UUID,
     p_limit INTEGER DEFAULT 10
@@ -281,3 +264,5 @@ BEGIN
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ✅ SUCCESS! Schema is ready to use!

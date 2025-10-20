@@ -1,10 +1,27 @@
 # AI Interview Platform Database Schema
 
+## 🚀 **Quick Start**
+
+### **Use This File**: `READY_TO_RUN.sql` ✅
+
+This is the **fixed, idempotent** schema that can be run multiple times without errors.
+
+---
+
 ## Overview
 This directory contains the complete production-ready database schema for the AI Interview Platform.
 
 ## Files
+- **`READY_TO_RUN.sql`** ⭐ - **USE THIS ONE** - Fixed schema ready for Supabase
+- `voice_interview_production_schema.sql` - Voice interview schema (also fixed)
 - `production_schema.sql` - Complete database schema with all tables, indexes, RLS policies, and triggers
+
+## ✅ **Recent Fixes Applied**
+
+1. **Fixed Foreign Keys** - Now references `auth.users` instead of `users`
+2. **Idempotent Triggers** - Added `DROP TRIGGER IF EXISTS` to prevent duplicate errors
+3. **Idempotent Policies** - Added `DROP POLICY IF EXISTS` for RLS policies
+4. **Safe to Re-run** - Can now run the schema multiple times without errors
 
 ## Features
 The schema includes:
