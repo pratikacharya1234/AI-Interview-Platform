@@ -186,8 +186,8 @@ export default function Agent({
 
   // Handle feedback generation and navigation
   useEffect(() => {
-    if (callStatus === CallStatus.FINISHED && type === 'interview') {
-      if (messages.length > 0) {
+    if (callStatus === CallStatus.FINISHED) {
+      if (type === 'interview' && messages.length > 0) {
         generateFeedback();
       } else if (type === 'generate') {
         router.push('/interviews');
@@ -524,7 +524,7 @@ export default function Agent({
           <Button
             onClick={handleDisconnect}
             size="lg"
-            variant="destructive"
+            variant="danger"
             className="px-8 py-6 text-lg rounded-full"
           >
             <PhoneOff className="w-6 h-6 mr-2" />

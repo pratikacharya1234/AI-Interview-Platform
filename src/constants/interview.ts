@@ -2,8 +2,8 @@
 
 export const interviewerConfig = {
   model: {
-    provider: 'google',
-    model: 'gemini-1.5-pro',
+    provider: 'google' as const,
+    model: 'gemini-1.5-pro' as const,
     temperature: 0.7,
     maxTokens: 500,
     systemPrompt: `You are a professional AI interviewer conducting a job interview. 
@@ -29,16 +29,13 @@ export const interviewerConfig = {
     - Keep track of time and pace the interview appropriately`,
   },
   voice: {
-    provider: 'google',
-    voiceId: 'en-US-Neural2-J', // Professional voice from Google
-    languageCode: 'en-US',
-    pitch: 0,
-    speakingRate: 1.0,
+    provider: '11labs' as const,
+    voiceId: 'rachel', // Professional voice
   },
   transcriber: {
-    provider: 'deepgram',
-    model: 'nova-2',
-    language: 'en',
+    provider: 'deepgram' as const,
+    model: 'nova-2' as const,
+    language: 'en' as const,
     smartFormat: true,
     profanityFilter: false,
     redact: false,
