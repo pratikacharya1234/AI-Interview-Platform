@@ -80,29 +80,51 @@ export default function SupabaseSignIn() {
     setError(null)
 
     try {
-      // Use demo credentials
+      // Use a valid email domain for demo
+      const demoEmail = 'demo.user@aiinterview.app'
+      const demoPassword = 'DemoPass123!'
+      
+      // First try to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'demo@example.com',
-        password: 'demo123456'
+        email: demoEmail,
+        password: demoPassword
       })
 
       if (error) {
         // If demo user doesn't exist, create it
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: 'demo@example.com',
-          password: 'demo123456'
+          email: demoEmail,
+          password: demoPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              full_name: 'Demo User',
+            }
+          }
         })
 
         if (signUpError) throw signUpError
 
-        if (signUpData.user) {
-          router.push('/dashboard')
+        // For localhost, try to sign in immediately
+        if (window.location.hostname === 'localhost' || signUpData.user?.email_confirmed_at) {
+          const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
+            email: demoEmail,
+            password: demoPassword
+          })
+
+          if (!newSignInError && newSignInData.user) {
+            router.push('/dashboard')
+            return
+          }
         }
+
+        setError('Demo account created! Please check your email to verify, or sign in with your own account.')
       } else if (data.user) {
         router.push('/dashboard')
       }
     } catch (error: any) {
-      setError('Demo login failed. Please use the sign up option.')
+      console.error('Demo login error:', error)
+      setError(error.message || 'Demo login failed. Please create your own account using the form above.')
     } finally {
       setIsLoading(false)
     }
