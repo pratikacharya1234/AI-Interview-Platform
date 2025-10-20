@@ -117,16 +117,17 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // If accessing protected route without auth, redirect to signin
+  // If accessing protected route without auth, redirect to login
   if (isProtectedPath && !isAuthenticated) {
+    console.log('No authenticated user, redirecting to signin')
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/auth/signin'
+    redirectUrl.pathname = '/login'
     redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If user is authenticated and trying to access auth pages, redirect to dashboard
-  if (isAuthenticated && request.nextUrl.pathname.startsWith('/auth/signin')) {
+  // If user is authenticated and trying to access login, redirect to dashboard
+  if (isAuthenticated && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname.startsWith('/auth/signin'))) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)
