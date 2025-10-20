@@ -26,29 +26,31 @@ export class VoiceStreamManager {
     }
   }
 
-  async playTextWithElevenLabs(text: string, voiceId: string = 'pNInz6obpgDQGcFmaJgB'): Promise<void> {
+  async playTextWithTTS(text: string, voice: string = 'en-US-Neural2-J'): Promise<void> {
     try {
       console.log('Generating speech for:', text.substring(0, 50) + '...')
       
       // Initialize audio context if needed (after user interaction)
       await this.initializeAudio()
       
-      // Call our ElevenLabs API
-      const response = await fetch('/api/tts/elevenlabs', {
+      // Try Google TTS first
+      const response = await fetch('/api/tts/google', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           text: text,
-          voice: voiceId
+          voiceId: voice,
+          languageCode: 'en-US',
+          pitch: 0,
+          speakingRate: 1.0
         }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error('ElevenLabs API error:', errorData)
-        throw new Error(`ElevenLabs API error: ${response.status}`)
+        console.warn('Google TTS not available, using browser TTS')
+        throw new Error(`TTS API error: ${response.status}`)
       }
 
       // Get audio data
@@ -58,7 +60,7 @@ export class VoiceStreamManager {
       await this.playAudioBuffer(audioData)
       
     } catch (error) {
-      console.error('Error playing ElevenLabs audio:', error)
+      console.log('Falling back to browser TTS')
       // Fallback to browser TTS
       this.fallbackToWebSpeech(text)
     }
@@ -167,8 +169,8 @@ export class VoiceStreamManager {
       // Get AI response
       const aiResponse = await this.getAIResponse(message, conversationHistory, interviewContext)
       
-      // Play the response with ElevenLabs
-      await this.playTextWithElevenLabs(aiResponse)
+      // Play the response with TTS
+      await this.playTextWithTTS(aiResponse)
       
       return aiResponse
 

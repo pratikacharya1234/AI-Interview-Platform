@@ -89,16 +89,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Claude API
-    results.apis.claude = {
-      configured: !!process.env.CLAUDE_API_KEY,
-      status: process.env.CLAUDE_API_KEY ? 'configured' : 'not configured'
-    }
-
-    // ElevenLabs TTS
-    results.apis.elevenlabs = {
-      configured: !!process.env.ELEVENLABS_API_KEY,
-      status: process.env.ELEVENLABS_API_KEY ? 'configured' : 'not configured'
+    // Vapi AI (Voice Interviews)
+    results.apis.vapi = {
+      configured: !!(process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN && process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID),
+      status: 'client-side only - check browser console'
     }
 
     // 4. Check Features
