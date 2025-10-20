@@ -21,24 +21,57 @@ export default function SignIn() {
         router.push('/dashboard')
       }
     })
-  }, [router])
+
+    // Check for OAuth errors in URL
+    const error = searchParams.get('error')
+    if (error) {
+      if (error === 'Configuration') {
+        setError('GitHub OAuth is not configured. Please check environment variables.')
+      } else if (error === 'AccessDenied') {
+        setError('Access denied. You must authorize the app to continue.')
+      } else if (error === 'Verification') {
+        setError('Verification failed. Please try again.')
+      } else {
+        setError(`Authentication error: ${error}`)
+      }
+    }
+  }, [router, searchParams])
 
   const handleGithubSignIn = async () => {
     setIsLoading(true)
     setError(null)
+    
+    // Check if running in browser
+    if (typeof window === 'undefined') {
+      setError('Cannot sign in on server side')
+      setIsLoading(false)
+      return
+    }
+
     try {
+      console.log('Initiating GitHub sign in...')
       const result = await signIn('github', { 
         callbackUrl: searchParams.get('redirect') || '/dashboard',
         redirect: true
       })
       
+      console.log('Sign in result:', result)
+      
       if (result?.error) {
-        setError('Failed to sign in with GitHub. Please try again.')
+        console.error('Sign in error:', result.error)
+        if (result.error === 'Configuration') {
+          setError('GitHub OAuth is not properly configured. Check your environment variables (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, NEXTAUTH_SECRET).')
+        } else if (result.error === 'AccessDenied') {
+          setError('You denied access. Please try again and authorize the application.')
+        } else {
+          setError(`Failed to sign in: ${result.error}`)
+        }
         setIsLoading(false)
       }
+      // If redirect is true and no error, the page will redirect automatically
     } catch (error: any) {
-      console.error('Sign in error:', error)
-      setError('An error occurred during sign in. Please try again.')
+      console.error('Sign in exception:', error)
+      setError('An unexpected error occurred. Please check the console for details.')
       setIsLoading(false)
     }
   }
