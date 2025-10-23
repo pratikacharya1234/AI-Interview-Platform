@@ -105,7 +105,7 @@ export default function PracticePage() {
       
       // Fetch user attempts with error handling
       const { data: attempts, error: attemptsError } = await supabase
-        .from('practice_attempts')
+        .from('user_question_attempts')
         .select('question_id, score')
         .eq('user_id', user.id)
       

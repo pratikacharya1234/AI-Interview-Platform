@@ -141,6 +141,22 @@ export default function AudioInterviewPage() {
         return
       }
       
+      // For NextAuth users (email-based ID), just use the session data
+      // Don't try to query Supabase with email as UUID
+      const isEmailId = currentUser.id?.includes('@')
+      
+      if (isEmailId) {
+        // NextAuth user - use session data directly
+        setUserProfile({
+          id: currentUser.id,
+          name: currentUser.name || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email || '',
+          avatar: authSession?.user?.image || undefined
+        })
+        return
+      }
+      
+      // For Supabase Auth users (UUID-based ID), query the database
       // First try to get profile from profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -150,7 +166,7 @@ export default function AudioInterviewPage() {
       
       // Fetch user attempts with error handling
       const { data: attempts, error: attemptsError } = await supabase
-        .from('practice_attempts')
+        .from('user_question_attempts')
         .select('question_id, score')
         .eq('user_id', currentUser.id)
       
@@ -197,8 +213,15 @@ export default function AudioInterviewPage() {
       }
     } catch (error) {
       console.error('Error in loadUserProfile:', error)
-      // Redirect to login on error
-      router.push('/auth/signin?redirect=/interview/audio')
+      // Don't redirect on profile errors, just use session data
+      if (authSession?.user) {
+        setUserProfile({
+          id: authSession.user.email || 'user',
+          name: authSession.user.name || authSession.user.email?.split('@')[0] || 'User',
+          email: authSession.user.email || '',
+          avatar: authSession.user.image || undefined
+        })
+      }
     }
   }
   
