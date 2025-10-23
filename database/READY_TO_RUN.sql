@@ -264,5 +264,3 @@ BEGIN
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ✅ SUCCESS! Schema is ready to use!
