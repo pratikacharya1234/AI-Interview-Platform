@@ -8,6 +8,134 @@ This is the **fixed, idempotent** schema that can be run multiple times without 
 
 ---
 
+## Database Setup
+
+This directory contains production-ready SQL scripts for the AI Interview Platform database.
+
+## 📁 Files
+
+### Core Scripts
+
+- **`create_all_tables.sql`** - Complete production schema (✅ USE THIS)
+  - Creates all tables, indexes, RLS policies, triggers, and functions
+  - Single file with everything you need
+  - Production-ready with real-world logic
+
+- **`drop_all_tables.sql`** - Safely removes all database objects (⚠️ USE WITH CAUTION)
+  - Drops all tables and data
+  - Removes policies, indexes, triggers, and functions
+  - Use for fresh starts or troubleshooting
+
+### Documentation
+
+- **`DATABASE_SETUP.md`** - Comprehensive setup guide
+  - Detailed schema documentation
+  - Security policies explained
+  - Helper functions reference
+  - Troubleshooting guide
+  - Production checklist
+
+## 🚀 Quick Start
+
+### Fresh Installation
+
+1. Open your **Supabase SQL Editor**
+2. Copy the entire contents of **`create_all_tables.sql`**
+3. Paste and click **Run**
+4. ✅ Done!
+
+### Reset Everything
+
+1. **⚠️ BACKUP YOUR DATA FIRST**
+2. Run **`drop_all_tables.sql`** in Supabase SQL Editor
+3. Then run **`create_all_tables.sql`**
+
+## 📊 What's Included
+
+### Tables Created
+- ✅ `profiles` - User profiles and statistics
+- ✅ `practice_attempts` - Practice session records
+- ✅ `interview_sessions` - Interview metadata
+- ✅ `interview_responses` - Conversation transcripts
+- ✅ `interview_feedback` - AI-generated feedback
+- ✅ `voice_analytics` - Voice quality metrics
+- ✅ `achievements` - User achievements
+- ✅ `user_progress` - Skill progression
+- ✅ `leaderboard` - Rankings
+- ✅ `streaks` - Activity tracking
+
+### Features
+- ✅ Row Level Security (RLS) on all tables
+- ✅ Automatic timestamp updates
+- ✅ Optimized indexes for performance
+- ✅ Helper functions for common queries
+- ✅ Proper foreign key relationships
+- ✅ Storage bucket for audio files
+- ✅ Triggers for data consistency
+
+## 🔒 Security
+
+- **RLS Enabled:** All tables have Row Level Security
+- **User Isolation:** Users can only access their own data
+- **Public Leaderboard:** Rankings visible to all users
+- **Secure Functions:** Helper functions use SECURITY DEFINER
+
+## 📚 Documentation
+
+For detailed information, see **[DATABASE_SETUP.md](./DATABASE_SETUP.md)**:
+- Complete schema reference
+- Security policies explained
+- Helper functions guide
+- Troubleshooting tips
+- Production checklist
+
+## 🛠️ Helper Functions
+
+```sql
+-- Get user interview statistics
+SELECT * FROM get_user_interview_stats('user-id');
+
+-- Get recent interviews with feedback
+SELECT * FROM get_recent_interviews_with_feedback('user-id', 10);
+```
+
+## ⚠️ Important Notes
+
+1. **Always backup before running drop_all_tables.sql**
+2. **Test in development first**
+3. **RLS policies are production-ready**
+4. **Indexes are optimized for performance**
+5. **All timestamps are in UTC**
+
+## 🐛 Troubleshooting
+
+### Can't access data?
+- Check if you're authenticated
+- Verify RLS policies match your use case
+- See DATABASE_SETUP.md for detailed troubleshooting
+
+### Foreign key errors?
+- Ensure parent records exist first
+- Check table creation order
+- Verify user IDs match
+
+### Performance issues?
+- Check if indexes are being used
+- Run `VACUUM ANALYZE`
+- Review slow queries in Supabase dashboard
+
+## 📝 Version
+
+**Current Version:** 2.0.0
+- Consolidated schema
+- Voice + Text interviews
+- Gamification system
+- Production-ready
+
+---
+
+**Need more help?** Check [DATABASE_SETUP.md](./DATABASE_SETUP.md) for comprehensive documentation.
+
 ## Overview
 This directory contains the complete production-ready database schema for the AI Interview Platform.
 

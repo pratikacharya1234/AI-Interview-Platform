@@ -4,20 +4,33 @@ import { cookies } from 'next/headers'
 
 // Types for database tables
 export interface Profile {
-  id: string
-  username?: string
+  id: string // UUID from auth.users
+  email: string
+  name?: string
   full_name?: string
+  username?: string
   avatar_url?: string
   bio?: string
-  role: 'user' | 'admin' | 'moderator'
+  experience_level?: string
+  target_role?: string
+  tech_stack?: string[]
+  total_interviews?: number
+  completed_interviews?: number
+  average_score?: number
+  total_xp?: number
+  level?: number
+  streak_days?: number
+  last_activity_date?: string
+  onboarding_completed?: boolean
+  preferences?: any
   created_at: string
   updated_at: string
 }
 
 export interface InterviewSession {
-  id: string
-  user_id: string
-  interview_type: 'behavioral' | 'technical' | 'video' | 'text' | 'conversational'
+  id: string // UUID
+  user_id: string // UUID from auth.users
+  interview_type: 'behavioral' | 'technical' | 'video' | 'text' | 'voice' | 'conversational'
   title: string
   description?: string
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
@@ -27,6 +40,8 @@ export interface InterviewSession {
   technical_score?: number
   overall_score?: number
   feedback?: any
+  feedback_id?: string
+  metadata?: any
   questions?: any
   answers?: any
   started_at?: string
@@ -80,7 +95,7 @@ export class DatabaseService {
   }
   
   // Get or create user profile
-  async getOrCreateProfile(userId: string) {
+  async getOrCreateProfile(userId: string, email?: string) {
     try {
       // First try to get existing profile
       const { data: profile, error: fetchError } = await this.client
@@ -97,7 +112,7 @@ export class DatabaseService {
           .from('profiles')
           .insert({
             id: userId,
-            role: 'user'
+            email: email || 'user@example.com'
           })
           .select()
           .single()

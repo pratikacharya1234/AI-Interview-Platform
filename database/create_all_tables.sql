@@ -10,9 +10,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS profiles (
-    id TEXT PRIMARY KEY,  -- Uses email or auth.users.id
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     name TEXT,
+    full_name TEXT,
+    username TEXT UNIQUE,
     avatar_url TEXT,
     bio TEXT,
     
@@ -46,8 +48,8 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 CREATE TABLE IF NOT EXISTS practice_attempts (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    question_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    question_id UUID,
     
     -- Attempt details
     answer TEXT,
@@ -64,9 +66,7 @@ CREATE TABLE IF NOT EXISTS practice_attempts (
     is_correct BOOLEAN,
     difficulty TEXT,
     
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_practice_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS practice_attempts (
 
 CREATE TABLE IF NOT EXISTS interview_sessions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     interview_type VARCHAR(50) NOT NULL DEFAULT 'voice',
@@ -83,18 +83,21 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
     
     metadata JSONB DEFAULT '{}',
     questions JSONB DEFAULT '[]',
+    answers JSONB DEFAULT '[]',
     
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
     duration_minutes INTEGER,
     
     overall_score DECIMAL(5,2),
+    communication_score DECIMAL(5,2),
+    technical_score DECIMAL(5,2),
+    ai_accuracy_score DECIMAL(5,2),
+    feedback JSONB,
     feedback_id UUID,
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================
@@ -103,7 +106,7 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
 
 CREATE TABLE IF NOT EXISTS interview_responses (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    interview_id UUID NOT NULL,
+    interview_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
     
     role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     content TEXT NOT NULL,
@@ -114,9 +117,7 @@ CREATE TABLE IF NOT EXISTS interview_responses (
     analysis JSONB,
     sequence_number INTEGER,
     
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_response_interview FOREIGN KEY (interview_id) REFERENCES interview_sessions(id) ON DELETE CASCADE
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================
@@ -125,8 +126,8 @@ CREATE TABLE IF NOT EXISTS interview_responses (
 
 CREATE TABLE IF NOT EXISTS interview_feedback (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    interview_id UUID NOT NULL,
-    user_id TEXT NOT NULL,
+    interview_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     
     overall_score DECIMAL(5,2) NOT NULL,
     hiring_recommendation TEXT,
@@ -142,10 +143,7 @@ CREATE TABLE IF NOT EXISTS interview_feedback (
     metadata JSONB DEFAULT '{}',
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_feedback_interview FOREIGN KEY (interview_id) REFERENCES interview_sessions(id) ON DELETE CASCADE,
-    CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================
@@ -154,7 +152,7 @@ CREATE TABLE IF NOT EXISTS interview_feedback (
 
 CREATE TABLE IF NOT EXISTS voice_analytics (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    interview_id UUID NOT NULL,
+    interview_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
     
     clarity_score DECIMAL(5,2),
     pace_score DECIMAL(5,2),
@@ -165,9 +163,7 @@ CREATE TABLE IF NOT EXISTS voice_analytics (
     articulation_score DECIMAL(5,2),
     
     analysis JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_analytics_interview FOREIGN KEY (interview_id) REFERENCES interview_sessions(id) ON DELETE CASCADE
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================
@@ -176,7 +172,7 @@ CREATE TABLE IF NOT EXISTS voice_analytics (
 
 CREATE TABLE IF NOT EXISTS achievements (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     
     achievement_type TEXT NOT NULL,
     title TEXT NOT NULL,
@@ -186,9 +182,7 @@ CREATE TABLE IF NOT EXISTS achievements (
     xp_reward INTEGER DEFAULT 0,
     unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    metadata JSONB DEFAULT '{}',
-    
-    CONSTRAINT fk_achievement_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+    metadata JSONB DEFAULT '{}'
 );
 
 -- ============================================
@@ -197,7 +191,7 @@ CREATE TABLE IF NOT EXISTS achievements (
 
 CREATE TABLE IF NOT EXISTS user_progress (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     
     category TEXT NOT NULL,
     skill TEXT NOT NULL,
@@ -211,7 +205,6 @@ CREATE TABLE IF NOT EXISTS user_progress (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    CONSTRAINT fk_progress_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
     UNIQUE(user_id, category, skill)
 );
 
@@ -221,7 +214,7 @@ CREATE TABLE IF NOT EXISTS user_progress (
 
 CREATE TABLE IF NOT EXISTS leaderboard (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     
     total_score INTEGER DEFAULT 0,
     total_xp INTEGER DEFAULT 0,
@@ -232,7 +225,6 @@ CREATE TABLE IF NOT EXISTS leaderboard (
     
     last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    CONSTRAINT fk_leaderboard_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
     UNIQUE(user_id)
 );
 
@@ -242,7 +234,7 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 
 CREATE TABLE IF NOT EXISTS streaks (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     
     current_streak INTEGER DEFAULT 0,
     longest_streak INTEGER DEFAULT 0,
@@ -253,7 +245,6 @@ CREATE TABLE IF NOT EXISTS streaks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    CONSTRAINT fk_streak_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
     UNIQUE(user_id)
 );
 
@@ -499,7 +490,7 @@ GRANT ALL ON streaks TO authenticated, anon;
 -- ============================================
 
 -- Get user interview statistics
-CREATE OR REPLACE FUNCTION get_user_interview_stats(p_user_id TEXT)
+CREATE OR REPLACE FUNCTION get_user_interview_stats(p_user_id UUID)
 RETURNS TABLE (
     total_interviews INTEGER,
     completed_interviews INTEGER,
@@ -522,7 +513,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Get recent interviews with feedback
 CREATE OR REPLACE FUNCTION get_recent_interviews_with_feedback(
-    p_user_id TEXT,
+    p_user_id UUID,
     p_limit INTEGER DEFAULT 10
 )
 RETURNS TABLE (
@@ -554,5 +545,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Auto-create profile on user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, name, full_name, avatar_url)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
+        COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture')
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger for new user signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- ✅ SUCCESS! Complete schema is ready to use!
 -- All tables created with proper RLS policies and permissions
++
