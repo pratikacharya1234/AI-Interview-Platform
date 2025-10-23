@@ -18,7 +18,9 @@ export default function SignIn() {
     // Check if user is already signed in
     getSession().then(session => {
       if (session) {
-        router.push('/dashboard')
+        // Redirect to the intended page or dashboard
+        const redirect = searchParams.get('redirect')
+        router.push(redirect || '/dashboard')
       }
     })
 

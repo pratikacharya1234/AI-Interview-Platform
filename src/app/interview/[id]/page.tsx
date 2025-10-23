@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, Play, FileText, Video, MessageSquare } from 'lucide-react'
@@ -19,27 +20,38 @@ interface InterviewData {
 export default function InterviewPage() {
   const params = useParams()
   const router = useRouter()
+  const { data: session, status } = useSession()
   const [interview, setInterview] = useState<InterviewData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchInterviewData()
-  }, [params.id])
+  }, [params.id, status, session])
 
   const fetchInterviewData = async () => {
     try {
       setLoading(true)
       
+      // Wait for NextAuth session
+      if (status === 'loading') {
+        return
+      }
+      
+      if (status === 'unauthenticated' || !session?.user) {
+        console.log('No authenticated session')
+        setLoading(false)
+        return
+      }
+      
       // Fetch from Supabase
       const supabase = (await import('@/lib/supabase/client')).createClient()
       
-      // Check authentication
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        console.error('Authentication error:', authError)
-        router.push(`/auth/signin?redirect=/interview/${params.id}`)
-        return
+      // Use NextAuth user info
+      const user = {
+        id: session.user.email || 'user-' + Date.now(),
+        email: session.user.email,
+        name: session.user.name
       }
       
       // Try to fetch existing interview

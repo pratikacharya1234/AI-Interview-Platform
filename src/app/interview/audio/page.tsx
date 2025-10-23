@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { createClient } from "@/lib/supabase/client"
 import {
   UserProfile,
@@ -21,6 +22,7 @@ import ResultsView from "./components/ResultsView"
 
 export default function AudioInterviewPage() {
   const router = useRouter()
+  const { data: authSession, status: authStatus } = useSession()
   const [supabase] = useState(() => createClient())
   const [user, setUser] = useState<any>(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -78,19 +80,18 @@ export default function AudioInterviewPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   
-  // Check authentication on mount
+  // Check authentication on mount - use NextAuth session
   useEffect(() => {
-    checkAuth()
-  }, [])
-  
-  const checkAuth = async () => {
-    try {
-      const { data: { user: authUser }, error } = await supabase.auth.getUser()
-      
-      if (error || !authUser) {
-        console.log('No authenticated user, redirecting to signin')
-        router.push('/auth/signin?redirect=/interview/audio')
-        return
+    if (authStatus === 'loading') {
+      return // Wait for session to load
+    }
+    
+    if (authStatus === 'authenticated' && authSession?.user) {
+      // User is authenticated via NextAuth
+      const authUser = {
+        id: authSession.user.email || 'user-' + Date.now(), // Use email as ID fallback
+        email: authSession.user.email,
+        name: authSession.user.name,
       }
       
       setUser(authUser)
@@ -99,11 +100,12 @@ export default function AudioInterviewPage() {
       // Load profile after auth check
       loadUserProfile(authUser)
       initializeSpeechRecognition()
-    } catch (error) {
-      console.error('Auth check error:', error)
-      router.push('/auth/signin?redirect=/interview/audio')
+    } else if (authStatus === 'unauthenticated') {
+      // ModernLayout will handle redirect, but just in case
+      console.log('No authenticated session')
+      setAuthLoading(false)
     }
-  }
+  }, [authStatus, authSession])
   
   // Cleanup on unmount
   useEffect(() => {
@@ -625,6 +627,18 @@ export default function AudioInterviewPage() {
   }
   
   // Render based on current view
+  // Show loading while checking authentication
+  if (authLoading || authStatus === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600">Loading interview...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (currentView === 'setup') {
     return (
       <SetupView
