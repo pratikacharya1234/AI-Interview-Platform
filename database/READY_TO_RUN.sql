@@ -1,7 +1,3 @@
--- ✅ FIXED: Ready to Run in Supabase SQL Editor
--- This schema is corrected to reference auth.users (Supabase's auth table)
--- Copy and paste this entire file into Supabase SQL Editor and click "Run"
-
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
