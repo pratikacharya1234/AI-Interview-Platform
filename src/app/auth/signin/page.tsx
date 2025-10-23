@@ -49,29 +49,46 @@ export default function SignIn() {
     }
 
     try {
-      console.log('Initiating GitHub sign in...')
+      console.log('=== GitHub Sign In Debug ===')
+      console.log('Current URL:', window.location.href)
+      console.log('Callback URL:', searchParams.get('redirect') || '/dashboard')
+      
       const result = await signIn('github', { 
         callbackUrl: searchParams.get('redirect') || '/dashboard',
-        redirect: true
+        redirect: false  // Changed to false to see the result
       })
       
       console.log('Sign in result:', result)
       
       if (result?.error) {
         console.error('Sign in error:', result.error)
+        console.error('Error details:', result)
+        
         if (result.error === 'Configuration') {
-          setError('GitHub OAuth is not properly configured. Check your environment variables (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, NEXTAUTH_SECRET).')
+          setError('GitHub OAuth is not properly configured. Please check: 1) NEXTAUTH_URL matches your deployment URL, 2) GITHUB_CLIENT_ID is set, 3) GITHUB_CLIENT_SECRET is set, 4) NEXTAUTH_SECRET is 32+ characters')
         } else if (result.error === 'AccessDenied') {
           setError('You denied access. Please try again and authorize the application.')
+        } else if (result.error === 'OAuthSignin') {
+          setError('Failed to initiate GitHub OAuth. Check that NEXTAUTH_URL is correct.')
+        } else if (result.error === 'OAuthCallback') {
+          setError('GitHub callback failed. Verify your GitHub OAuth App callback URL matches NEXTAUTH_URL/api/auth/callback/github')
         } else {
-          setError(`Failed to sign in: ${result.error}`)
+          setError(`Authentication failed: ${result.error}. Check browser console for details.`)
         }
         setIsLoading(false)
+      } else if (result?.ok) {
+        console.log('Sign in successful! Redirecting...')
+        // Manually redirect on success
+        window.location.href = result.url || searchParams.get('redirect') || '/dashboard'
+      } else {
+        console.error('Unexpected result:', result)
+        setError('Unexpected response from authentication service.')
+        setIsLoading(false)
       }
-      // If redirect is true and no error, the page will redirect automatically
     } catch (error: any) {
       console.error('Sign in exception:', error)
-      setError('An unexpected error occurred. Please check the console for details.')
+      console.error('Exception details:', error.message, error.stack)
+      setError(`An unexpected error occurred: ${error.message}. Check console for details.`)
       setIsLoading(false)
     }
   }

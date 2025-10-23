@@ -1,97 +1,91 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
-    }
-  )
-
-  const {
-    data: { user },
-    error: authError
-  } = await supabase.auth.getUser()
-
-  console.log(`[MIDDLEWARE] ${request.nextUrl.pathname} - User: ${user ? user.email : 'None'}, Error: ${authError?.message || 'None'}`)
-
-  // Protected routes
-  const protectedRoutes = ['/dashboard', '/profile']
-  const authRoutes = ['/signin', '/signup']
-  
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
-  
-  const isAuthRoute = authRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
-
-  // Redirect unauthenticated users from protected routes
-  if (isProtectedRoute && !user) {
-    console.log(`[MIDDLEWARE] Redirecting ${request.nextUrl.pathname} to /signin - no user`)
-    return NextResponse.redirect(new URL('/signin', request.url))
+  // Skip middleware for static files and API routes
+  if (
+    request.nextUrl.pathname.startsWith('/_next') ||
+    request.nextUrl.pathname.startsWith('/api') ||
+    request.nextUrl.pathname.includes('.')
+  ) {
+    return NextResponse.next()
   }
 
-  // Redirect authenticated users from auth routes
-  if (isAuthRoute && user) {
-    console.log(`[MIDDLEWARE] Redirecting ${request.nextUrl.pathname} to /dashboard - user authenticated`)
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // Check for NextAuth session
+  let token = null
+  try {
+    token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  } catch (error) {
+    console.log('NextAuth token check error:', error)
+  }
+  
+  // User is authenticated if NextAuth session exists
+  const isAuthenticated = !!token
+
+  // Protected routes that require authentication
+  const protectedPaths = [
+    '/dashboard',
+    '/interview/audio',
+    '/interview/video', 
+    '/interview/text',
+    '/interview/voice',
+    '/interview/history',
+    '/interview/feedback',
+    '/interview/performance',
+    '/practice',
+    '/profile',
+    '/settings',
+    '/analytics',
+    '/reports',
+    '/preferences',
+    '/achievements',
+    '/ai/coach',
+    '/ai/feedback',
+    '/ai/prep',
+    '/mentor',
+    '/mock',
+    '/coding',
+    '/learning'
+  ]
+  
+  const isProtectedPath = protectedPaths.some(path => 
+    request.nextUrl.pathname.startsWith(path)
+  )
+  
+  // If accessing protected route without auth, redirect to login
+  if (isProtectedPath && !isAuthenticated) {
+    console.log('No authenticated user, redirecting to signin')
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/auth/signin'
+    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
-  console.log(`[MIDDLEWARE] Allowing ${request.nextUrl.pathname}`)  
+  // If user is authenticated and trying to access login/signin, redirect to dashboard
+  if (isAuthenticated && (
+    request.nextUrl.pathname === '/login' || 
+    request.nextUrl.pathname === '/signin' ||
+    request.nextUrl.pathname.startsWith('/auth/signin')
+  )) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/dashboard'
+    return NextResponse.redirect(redirectUrl)
+  }
 
-  return response
+  // Allow all other paths (public pages)
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     * - api routes (they handle their own auth)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
   ],
 }

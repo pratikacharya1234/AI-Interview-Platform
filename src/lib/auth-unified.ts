@@ -1,6 +1,5 @@
 import { NextAuthOptions } from "next-auth"
 import GithubProvider from "next-auth/providers/github"
-import { createClient } from '@/lib/supabase/client'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -15,55 +14,6 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === 'github') {
-        try {
-          // Create or update user in Supabase
-          const supabase = createClient()
-          
-          // Sign in with Supabase using GitHub OAuth token
-          const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
-            provider: 'github',
-            options: {
-              skipBrowserRedirect: true
-            }
-          })
-
-          if (authError) {
-            console.error('Supabase auth error:', authError)
-            // Continue with NextAuth only
-          }
-
-          // Create or update profile in Supabase
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: user.id,
-              email: user.email,
-              full_name: user.name,
-              avatar_url: user.image,
-              username: (profile as any)?.login,
-              github_username: (profile as any)?.login,
-              bio: (profile as any)?.bio,
-              company: (profile as any)?.company,
-              location: (profile as any)?.location,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'id'
-            })
-
-          if (profileError) {
-            console.error('Profile upsert error:', profileError)
-          }
-
-          return true
-        } catch (error) {
-          console.error('SignIn callback error:', error)
-          return true // Allow sign in to continue
-        }
-      }
-      return true
-    },
     
     async jwt({ token, account, profile, user }) {
       // Initial sign in
