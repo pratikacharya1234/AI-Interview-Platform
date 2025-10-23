@@ -54,9 +54,10 @@ export function ModernLayout({ children }: ModernLayoutProps) {
   // Redirect if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/')
+      const currentPath = pathname
+      router.push(`/auth/signin?redirect=${encodeURIComponent(currentPath)}`)
     }
-  }, [status, router])
+  }, [status, router, pathname])
   
   if (status === 'loading') {
     return (

@@ -11,12 +11,29 @@ interface ConditionalLayoutProps {
 export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname()
   
-  // Landing page gets no layout wrapper (it has its own navigation)
-  const isLandingPage = pathname === '/'
+  // Landing and public pages get no layout wrapper (they have their own navigation)
+  const isLandingPage = pathname === '/' ||
+                       pathname.startsWith('/features') ||
+                       pathname.startsWith('/pricing') ||
+                       pathname.startsWith('/blog') ||
+                       pathname.startsWith('/docs') ||
+                       pathname.startsWith('/about') ||
+                       pathname.startsWith('/contact') ||
+                       pathname.startsWith('/demo') ||
+                       pathname.startsWith('/careers') ||
+                       pathname.startsWith('/press') ||
+                       pathname.startsWith('/privacy') ||
+                       pathname.startsWith('/terms') ||
+                       pathname.startsWith('/cookies') ||
+                       pathname.startsWith('/security') ||
+                       pathname.startsWith('/compliance') ||
+                       pathname.startsWith('/status') ||
+                       pathname.startsWith('/sitemap')
   
   // Auth pages get minimal layout
   const isAuthPage = pathname.startsWith('/auth/') || 
                      pathname.startsWith('/login') ||
+                     pathname.startsWith('/signin') ||
                      pathname.startsWith('/register') ||
                      pathname.startsWith('/forgot-password')
   

@@ -67,15 +67,18 @@ export default function VoiceInterviewPage() {
 
   const loadUserProfile = async () => {
     try {
-      // Get current user session
+      // Try to get Supabase user first
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user) {
-        // Use demo profile if not authenticated
+        // Fallback: Try to get user info from session storage or use guest mode
+        const guestName = sessionStorage.getItem('guestUserName') || 'Guest User';
+        const guestId = sessionStorage.getItem('guestUserId') || `guest-${Date.now()}`;
+        
         setSetup(prev => ({
           ...prev,
-          userName: 'Demo User',
-          userId: 'demo-user-id',
+          userName: guestName,
+          userId: guestId,
         }));
         setIsLoading(false);
         return;

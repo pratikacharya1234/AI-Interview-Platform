@@ -25,13 +25,7 @@ export async function middleware(request: NextRequest) {
   // Protected routes that require authentication
   const protectedPaths = [
     '/dashboard',
-    '/interview/audio',
-    '/interview/video', 
-    '/interview/text',
-    '/interview/voice',
-    '/interview/history',
-    '/interview/feedback',
-    '/interview/performance',
+    '/interview',
     '/practice',
     '/profile',
     '/settings',
@@ -39,13 +33,17 @@ export async function middleware(request: NextRequest) {
     '/reports',
     '/preferences',
     '/achievements',
-    '/ai/coach',
-    '/ai/feedback',
-    '/ai/prep',
+    '/ai',
     '/mentor',
     '/mock',
     '/coding',
-    '/learning'
+    '/learning',
+    '/leaderboard',
+    '/streak',
+    '/progress',
+    '/resources',
+    '/subscription',
+    '/system-health'
   ]
   
   const isProtectedPath = protectedPaths.some(path => 
