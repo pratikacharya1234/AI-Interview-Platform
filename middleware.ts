@@ -27,27 +27,39 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
+          const cookieOptions = {
+            ...options,
+            sameSite: 'lax' as const,
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+          }
           request.cookies.set({
             name,
             value,
-            ...options,
+            ...cookieOptions,
           })
           response.cookies.set({
             name,
             value,
-            ...options,
+            ...cookieOptions,
           })
         },
         remove(name: string, options: CookieOptions) {
+          const cookieOptions = {
+            ...options,
+            sameSite: 'lax' as const,
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+          }
           request.cookies.set({
             name,
             value: '',
-            ...options,
+            ...cookieOptions,
           })
           response.cookies.set({
             name,
             value: '',
-            ...options,
+            ...cookieOptions,
           })
         },
       },

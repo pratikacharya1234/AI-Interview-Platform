@@ -37,11 +37,19 @@ export async function GET(request: NextRequest) {
         set(name: string, value: string, options: CookieOptions) {
           try {
             console.log(`Cookie SET: ${name}`)
-            cookieStore.set({ name, value, ...options })
+            // Ensure cookies work in production (Vercel)
+            // Important: httpOnly must be FALSE for Supabase client SDK to read cookies
+            const cookieOptions = {
+              ...options,
+              sameSite: 'lax' as const,
+              secure: process.env.NODE_ENV === 'production',
+              path: '/',
+            }
+            cookieStore.set({ name, value, ...cookieOptions })
             response.cookies.set({
               name,
               value,
-              ...options,
+              ...cookieOptions,
             })
           } catch (error) {
             console.error('Error setting cookie:', name, error)
@@ -50,11 +58,17 @@ export async function GET(request: NextRequest) {
         remove(name: string, options: CookieOptions) {
           try {
             console.log(`Cookie REMOVE: ${name}`)
-            cookieStore.set({ name, value: '', ...options })
+            const cookieOptions = {
+              ...options,
+              sameSite: 'lax' as const,
+              secure: process.env.NODE_ENV === 'production',
+              path: '/',
+            }
+            cookieStore.set({ name, value: '', ...cookieOptions })
             response.cookies.set({
               name,
               value: '',
-              ...options,
+              ...cookieOptions,
             })
           } catch (error) {
             console.error('Error removing cookie:', name, error)
