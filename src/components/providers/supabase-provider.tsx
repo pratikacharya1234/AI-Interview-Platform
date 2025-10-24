@@ -27,11 +27,17 @@ export function SupabaseProvider({
     const initializeAuth = async () => {
       try {
         console.log('Initializing Supabase auth...')
+        console.log('Document cookies:', document.cookie)
+
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession()
 
         if (error) {
           console.error('Error getting session:', error)
+          // Even if there's an error, set loading to false
+          setLoading(false)
+          setUser(null)
+          return
         }
 
         console.log('Session loaded:', {
@@ -41,9 +47,10 @@ export function SupabaseProvider({
         })
 
         setUser(session?.user ?? null)
+        setLoading(false)
       } catch (error) {
         console.error('Auth initialization error:', error)
-      } finally {
+        setUser(null)
         setLoading(false)
       }
     }

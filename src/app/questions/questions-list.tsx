@@ -267,7 +267,7 @@ export default function QuestionsList() {
               {DIFFICULTIES.map(difficulty => (
                 <Button
                   key={difficulty}
-                  variant={filters.difficulty?.includes(difficulty) ? 'primary'(difficulty) ? 'default' : 'outline'}
+                  variant={filters.difficulty?.includes(difficulty) ? 'primary' : 'outline'}
                   size="sm"
                   onClick={() => toggleDifficultyFilter(difficulty)}
                   className="capitalize"
@@ -285,7 +285,7 @@ export default function QuestionsList() {
               {TYPES.map(type => (
                 <Button
                   key={type}
-                  variant={filters.difficulty?.includes(difficulty) ? 'primary'(type) ? 'default' : 'outline'}
+                  variant={filters.type?.includes(type) ? 'primary' : 'outline'}
                   size="sm"
                   onClick={() => toggleTypeFilter(type)}
                   className="capitalize"
@@ -304,7 +304,7 @@ export default function QuestionsList() {
                 {(['not_attempted', 'attempted', 'solved'] as const).map(status => (
                   <Button
                     key={status}
-                    variant={filters.difficulty?.includes(difficulty) ? 'primary'(status) ? 'default' : 'outline'}
+                    variant={filters.status?.includes(status) ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => toggleStatusFilter(status)}
                     className="capitalize"
@@ -325,7 +325,7 @@ export default function QuestionsList() {
               {availableTopics.slice(0, 10).map(topic => (
                 <Button
                   key={topic}
-                  variant={filters.difficulty?.includes(difficulty) ? 'primary'(topic) ? 'default' : 'outline'}
+                  variant={filters.topic?.includes(topic) ? 'primary' : 'outline'}
                   size="sm"
                   onClick={() => toggleTopicFilter(topic)}
                 >
@@ -557,7 +557,7 @@ export default function QuestionsList() {
                 return (
                   <Button
                     key={pageNum}
-                    variant={page === pageNum ? 'default' : 'outline'}
+                    variant={page === pageNum ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => setPage(pageNum)}
                   >
