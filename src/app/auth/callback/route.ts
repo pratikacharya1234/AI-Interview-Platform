@@ -8,9 +8,12 @@ export async function GET(request: NextRequest) {
   const redirect = requestUrl.searchParams.get('redirect') || '/dashboard'
 
   console.log('=== Auth Callback Start ===')
+  console.log('Full URL:', request.url)
   console.log('Code present:', !!code)
+  console.log('Code length:', code?.length)
   console.log('Redirect target:', redirect)
   console.log('Origin:', requestUrl.origin)
+  console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...')
 
   if (!code) {
     console.error('No code provided in callback')
@@ -79,6 +82,8 @@ export async function GET(request: NextRequest) {
     console.log('User ID:', data.session.user.id)
     console.log('User email:', data.session.user.email)
     console.log('Expires at:', data.session.expires_at)
+    console.log('Access token (first 20 chars):', data.session.access_token?.substring(0, 20) + '...')
+    console.log('Response cookies being set:', response.cookies.getAll().map(c => c.name))
     console.log('=== Auth Callback End ===')
   } catch (error) {
     console.error('Exception in callback:', error)

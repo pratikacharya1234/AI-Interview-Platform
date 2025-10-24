@@ -26,30 +26,41 @@ export function SupabaseProvider({
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        console.log('Initializing Supabase auth...')
+        console.log('=== SupabaseProvider: Initializing auth ===')
+        console.log('Current pathname:', window.location.pathname)
         console.log('Document cookies:', document.cookie)
+        console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...')
 
         // Get initial session
+        console.log('Calling supabase.auth.getSession()...')
         const { data: { session }, error } = await supabase.auth.getSession()
 
         if (error) {
-          console.error('Error getting session:', error)
-          // Even if there's an error, set loading to false
+          console.error('❌ Error getting session:', error.message, error)
           setLoading(false)
           setUser(null)
           return
         }
 
-        console.log('Session loaded:', {
+        console.log('✓ Session loaded:', {
           hasSession: !!session,
           userId: session?.user?.id,
-          email: session?.user?.email
+          email: session?.user?.email,
+          expiresAt: session?.expires_at
         })
 
-        setUser(session?.user ?? null)
+        if (session?.user) {
+          console.log('✓ User authenticated:', session.user.email)
+          setUser(session.user)
+        } else {
+          console.log('⚠️ No session found')
+          setUser(null)
+        }
+
         setLoading(false)
+        console.log('=== SupabaseProvider: Auth initialization complete ===')
       } catch (error) {
-        console.error('Auth initialization error:', error)
+        console.error('❌ Auth initialization exception:', error)
         setUser(null)
         setLoading(false)
       }
@@ -62,29 +73,35 @@ export function SupabaseProvider({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Supabase auth state changed:', event)
+      console.log('🔄 Supabase auth state changed:', event, {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        email: session?.user?.email
+      })
 
       setUser(session?.user ?? null)
 
       // Handle different auth events
       switch (event) {
         case 'SIGNED_IN':
-          // User signed in through Supabase
-          console.log('Supabase session detected')
+          console.log('✅ SIGNED_IN event - User authenticated via Supabase')
+          console.log('Refreshing router...')
           router.refresh()
           break
         case 'SIGNED_OUT':
-          // User signed out - redirect to signin page
+          console.log('👋 SIGNED_OUT event - Redirecting to sign in')
           setUser(null)
           router.push('/auth/supabase-signin')
           break
         case 'TOKEN_REFRESHED':
-          // Token was refreshed
-          console.log('Supabase token refreshed')
+          console.log('🔄 TOKEN_REFRESHED - Session token refreshed')
           break
         case 'USER_UPDATED':
-          // User data was updated
+          console.log('👤 USER_UPDATED - User data updated')
           setUser(session?.user ?? null)
+          break
+        case 'INITIAL_SESSION':
+          console.log('🎬 INITIAL_SESSION - Session loaded on mount')
           break
       }
     })

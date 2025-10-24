@@ -64,10 +64,17 @@ export function ModernLayout({ children }: ModernLayoutProps) {
     )
   }
 
-  // If unauthenticated at this point, middleware will redirect
-  // Don't render protected content without user
+  // If unauthenticated at this point, show a message and let middleware redirect
   if (!user) {
-    return null
+    console.log('ModernLayout: No user detected, showing redirect message')
+    return (
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Verifying authentication...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">If you're not redirected, please <a href="/auth/supabase-signin" className="text-blue-600 hover:underline">sign in</a></p>
+        </div>
+      </div>
+    )
   }
 
   // Create session object for compatibility with components expecting NextAuth session
