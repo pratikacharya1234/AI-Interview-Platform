@@ -26,13 +26,20 @@ export function SupabaseProvider({
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        console.log('Initializing Supabase auth...')
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession()
-        
+
         if (error) {
           console.error('Error getting session:', error)
         }
-        
+
+        console.log('Session loaded:', {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          email: session?.user?.email
+        })
+
         setUser(session?.user ?? null)
       } catch (error) {
         console.error('Auth initialization error:', error)
