@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -112,7 +112,7 @@ const getRarityColor = (rarity: string) => {
 }
 
 export default function AchievementsPage() {
-  const { data: session } = useSession()
+  const { user } = useSupabase()
   const [selectedCategory, setSelectedCategory] = useState('all')
   
   const totalAchievements = achievements.length

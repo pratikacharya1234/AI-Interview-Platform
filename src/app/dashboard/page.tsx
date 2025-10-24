@@ -1,12 +1,12 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import ModernDashboard from './modern-dashboard'
 
 export default function DashboardPage() {
-  const { data: session } = useSession()
+  const { user } = useSupabase()
 
-  if (!session?.user) {
+  if (!user) {
     return null
   }
 

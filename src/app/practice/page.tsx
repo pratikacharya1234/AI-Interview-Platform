@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Loader2 } from 'lucide-react'
-import { 
-  Play, 
+import {
+  Play,
   Search,
   Filter,
   BookOpen,
@@ -57,7 +57,7 @@ export default function PracticePage() {
     if (!authLoading && user) {
       loadData()
     } else if (!authLoading && !user) {
-      router.push('/auth/signin?redirect=/practice')
+      router.push('/auth/supabase-signin?redirect=/practice')
     }
   }, [authLoading, user])
   

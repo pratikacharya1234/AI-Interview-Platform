@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, Play, FileText, Video, MessageSquare } from 'lucide-react'
@@ -20,47 +20,37 @@ interface InterviewData {
 export default function InterviewPage() {
   const params = useParams()
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { supabase, user, loading: authLoading } = useSupabase()
   const [interview, setInterview] = useState<InterviewData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchInterviewData()
-  }, [params.id, status, session])
+    if (!authLoading) {
+      fetchInterviewData()
+    }
+  }, [params.id, authLoading, user])
 
   const fetchInterviewData = async () => {
     try {
       setLoading(true)
-      
-      // Wait for NextAuth session
-      if (status === 'loading') {
-        return
-      }
-      
-      if (status === 'unauthenticated' || !session?.user) {
-        console.log('No authenticated session')
+
+      if (!user) {
+        console.log('No authenticated user')
         setLoading(false)
         return
       }
-      
-      // Fetch from Supabase
-      const supabase = (await import('@/lib/supabase/client')).createClient()
-      
-      // Use NextAuth user info
-      const user = {
-        id: session.user.email || 'user-' + Date.now(),
-        email: session.user.email,
-        name: session.user.name
-      }
+
+      // Use Supabase user info
+      const userId = user.id
       
       // Try to fetch existing interview
       const { data: interviewData, error: fetchError } = await supabase
-        .from('interviews')
+        .from('interview_sessions')
         .select('*')
         .eq('id', params.id)
         .single()
-      
+
       if (fetchError || !interviewData) {
         // Create a new interview if not found
         const newInterview: InterviewData = {
@@ -71,18 +61,17 @@ export default function InterviewPage() {
           status: 'pending',
           created_at: new Date().toISOString()
         }
-        
+
         // Save to database with error handling
         const { data: savedInterview, error: saveError } = await supabase
-          .from('interviews')
+          .from('interview_sessions')
           .insert({
             id: newInterview.id,
-            user_id: user.id,
+            user_id: userId,
             type: newInterview.type,
-            title: newInterview.title,
-            description: newInterview.description,
+            position: newInterview.title,
             status: newInterview.status,
-            created_at: newInterview.created_at
+            started_at: newInterview.created_at
           })
           .select()
           .single()

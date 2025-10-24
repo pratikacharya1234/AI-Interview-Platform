@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -91,7 +91,7 @@ const skillBreakdown = [
 ]
 
 export default function ReportsPage() {
-  const { data: session } = useSession()
+  const { user } = useSupabase()
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [selectedType, setSelectedType] = useState('all')
   const [isGenerating, setIsGenerating] = useState(false)

@@ -44,51 +44,29 @@ export function SupabaseProvider({
     initializeAuth()
 
     // Listen for auth changes
+    // This provider manages Supabase authentication state
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event)
-      
+      console.log('Supabase auth state changed:', event)
+
       setUser(session?.user ?? null)
-      
+
       // Handle different auth events
       switch (event) {
         case 'SIGNED_IN':
-          // User signed in - ensure profile exists
-          if (session?.user) {
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single()
-              
-              if (!profile) {
-                // Create profile if it doesn't exist
-                await supabase
-                  .from('profiles')
-                  .insert({
-                    id: session.user.id,
-                    email: session.user.email,
-                    username: session.user.email?.split('@')[0],
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  })
-              }
-            } catch (error) {
-              console.log('Profile check skipped:', error)
-            }
-          }
+          // User signed in through Supabase
+          console.log('Supabase session detected')
           router.refresh()
           break
         case 'SIGNED_OUT':
-          // User signed out
+          // User signed out - redirect to signin page
           setUser(null)
-          router.push('/auth/signin')
+          router.push('/auth/supabase-signin')
           break
         case 'TOKEN_REFRESHED':
           // Token was refreshed
-          console.log('Token refreshed successfully')
+          console.log('Supabase token refreshed')
           break
         case 'USER_UPDATED':
           // User data was updated

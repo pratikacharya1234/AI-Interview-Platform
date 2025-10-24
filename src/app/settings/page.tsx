@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +30,7 @@ import {
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 export default function SettingsPage() {
-  const { data: session } = useSession()
+  const { user } = useSupabase()
   const { preferences, updatePreference, savePreferences, isLoading, isSaving } = useUserPreferences()
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
@@ -374,8 +374,8 @@ export default function SettingsPage() {
                         <span className="text-white text-xs font-bold">GH</span>
                       </div>
                       <div>
-                        <p className="font-medium">{session?.user?.name}</p>
-                        <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
+                        <p className="font-medium">{user?.user_metadata?.name || user?.email?.split('@')[0]}</p>
+                        <p className="text-sm text-muted-foreground">{user?.email}</p>
                       </div>
                     </div>
                     <Badge variant="secondary">GitHub</Badge>

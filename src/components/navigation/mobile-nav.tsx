@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { cn } from '@/lib/utils'
 import {
   X,
@@ -28,7 +29,6 @@ import {
   Sparkles,
   FileText
 } from 'lucide-react'
-import { signOut } from 'next-auth/react'
 
 interface MobileNavProps {
   open: boolean
@@ -198,8 +198,9 @@ const navigation: NavItem[] = [
 
 export function MobileNav({ open, onOpenChange, session }: MobileNavProps) {
   const pathname = usePathname()
+  const { supabase } = useSupabase()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
-  
+
   const toggleExpanded = (itemId: string) => {
     setExpandedItems(prev =>
       prev.includes(itemId)
@@ -207,14 +208,14 @@ export function MobileNav({ open, onOpenChange, session }: MobileNavProps) {
         : [...prev, itemId]
     )
   }
-  
+
   const isActive = (href?: string) => {
     if (!href) return false
     return pathname === href || pathname.startsWith(href + '/')
   }
-  
+
   const handleSignOut = async () => {
-    await signOut({ redirect: false })
+    await supabase.auth.signOut()
     window.location.href = '/'
   }
   

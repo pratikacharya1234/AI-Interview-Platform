@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { usePathname, useRouter } from 'next/navigation'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { cn } from '@/lib/utils'
 import { ModernSidebar } from '@/components/navigation/modern-sidebar'
 import { TopBar } from '@/components/navigation/top-bar'
@@ -14,7 +14,7 @@ interface ModernLayoutProps {
 }
 
 export function ModernLayout({ children }: ModernLayoutProps) {
-  const { data: session, status } = useSession()
+  const { user, loading: authLoading } = useSupabase()
   const pathname = usePathname()
   const router = useRouter()
   
@@ -51,15 +51,9 @@ export function ModernLayout({ children }: ModernLayoutProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
   
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      const currentPath = pathname
-      router.push(`/auth/signin?redirect=${encodeURIComponent(currentPath)}`)
-    }
-  }, [status, router, pathname])
-  
-  if (status === 'loading') {
+  // Show loading state while auth is loading
+  // Note: Middleware handles authentication redirects for protected routes
+  if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="relative">
@@ -69,6 +63,21 @@ export function ModernLayout({ children }: ModernLayoutProps) {
       </div>
     )
   }
+
+  // If unauthenticated at this point, middleware will redirect
+  // Don't render protected content without user
+  if (!user) {
+    return null
+  }
+
+  // Create session object for compatibility with components expecting NextAuth session
+  const session = user ? {
+    user: {
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+      email: user.email,
+      image: user.user_metadata?.avatar_url || null,
+    }
+  } : null
   
   return (
     <div className="relative min-h-screen bg-gray-50 dark:bg-gray-900">

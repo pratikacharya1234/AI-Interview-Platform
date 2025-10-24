@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { cn } from '@/lib/utils'
 import {
   Menu,
@@ -97,8 +97,10 @@ export function TopBar({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
   
+  const { supabase } = useSupabase()
+
   const handleSignOut = async () => {
-    await signOut({ redirect: false })
+    await supabase.auth.signOut()
     router.push('/')
   }
   
