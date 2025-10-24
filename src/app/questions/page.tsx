@@ -1,15 +1,11 @@
 import { Metadata } from 'next'
-import QuestionBank from '@/components/questions/QuestionBank'
+import QuestionsList from './questions-list'
 
 export const metadata: Metadata = {
   title: 'Question Bank | AI Interview Platform',
-  description: 'Browse and practice with our AI-generated interview questions',
+  description: 'Browse and practice with our comprehensive question bank',
 }
 
 export default function QuestionsPage() {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <QuestionBank />
-    </div>
-  )
+  return <QuestionsList />
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import Link from 'next/link'
 import {
   TrendingUp,
@@ -49,7 +49,7 @@ interface RecentActivity {
 }
 
 export default function ModernDashboard() {
-  const { data: session } = useSession()
+  const { user } = useSupabase()
   const [stats, setStats] = useState<DashboardStats>({
     totalInterviews: 0,
     averageScore: 0,
@@ -205,7 +205,7 @@ export default function ModernDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back, {session?.user?.name || 'User'}
+            Welcome back, {user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             {stats.currentStreak > 0 

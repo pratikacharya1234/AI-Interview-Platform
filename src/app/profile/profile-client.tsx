@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSupabase } from '@/components/providers/supabase-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,7 +36,7 @@ import {
 } from 'lucide-react'
 
 export default function ProfileClient() {
-  const { data: session, status } = useSession()
+  const { user, loading } = useSupabase()
   const { preferences, updatePreference, savePreferences, isLoading, isSaving } = usePreferences()
   const [isEditing, setIsEditing] = useState(false)
   const [editedProfile, setEditedProfile] = useState({
@@ -46,14 +46,14 @@ export default function ProfileClient() {
   })
 
   useEffect(() => {
-    if (session?.user) {
+    if (user) {
       setEditedProfile({
-        bio: (session.user as any).bio || '',
-        location: (session.user as any).location || '',
-        company: (session.user as any).company || ''
+        bio: (user.user_metadata as any)?.bio || '',
+        location: (user.user_metadata as any)?.location || '',
+        company: (user.user_metadata as any)?.company || ''
       })
     }
-  }, [session])
+  }, [user])
 
   const handleSaveProfile = async () => {
     // In a real app, this would save to the backend
@@ -73,7 +73,7 @@ export default function ProfileClient() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Card>
@@ -86,7 +86,19 @@ export default function ProfileClient() {
     )
   }
 
-  const user = session.user as any
+  // Map Supabase user to expected format
+  const userInfo = {
+    avatar_url: user?.user_metadata?.avatar_url,
+    name: user?.user_metadata?.name || user?.email?.split('@')[0],
+    login: user?.email?.split('@')[0],
+    email: user?.email,
+    bio: editedProfile.bio,
+    location: editedProfile.location,
+    company: editedProfile.company,
+    followers: 0,
+    following: 0,
+    public_repos: 0
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -109,25 +121,25 @@ export default function ProfileClient() {
             <CardHeader>
               <div className="flex items-center space-x-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.avatar_url} alt={user.name || user.login} />
+                  <AvatarImage src={userInfo.avatar_url} alt={userInfo.name || userInfo.login} />
                   <AvatarFallback>
                     <User className="h-8 w-8" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold">{user.name || user.login}</h2>
-                  <p className="text-gray-600">@{user.login}</p>
+                  <h2 className="text-2xl font-bold">{userInfo.name || userInfo.login}</h2>
+                  <p className="text-gray-600">@{userInfo.login}</p>
                   <div className="flex items-center space-x-4 mt-2">
-                    {user.location && (
+                    {userInfo.location && (
                       <div className="flex items-center text-sm text-gray-500">
                         <MapPin className="h-4 w-4 mr-1" />
-                        {user.location}
+                        {userInfo.location}
                       </div>
                     )}
-                    {user.company && (
+                    {userInfo.company && (
                       <div className="flex items-center text-sm text-gray-500">
                         <Building className="h-4 w-4 mr-1" />
-                        {user.company}
+                        {userInfo.company}
                       </div>
                     )}
                   </div>
@@ -178,28 +190,28 @@ export default function ProfileClient() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {user.bio && (
+                  {userInfo.bio && (
                     <div>
                       <h3 className="font-semibold mb-2">Bio</h3>
-                      <p className="text-gray-700">{user.bio}</p>
+                      <p className="text-gray-700">{userInfo.bio}</p>
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center space-x-2">
                       <Mail className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{user.email || 'No email provided'}</span>
+                      <span className="text-sm">{userInfo.email || 'No email provided'}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{user.followers || 0} followers</span>
+                      <span className="text-sm">{userInfo.followers || 0} followers</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <GitBranch className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{user.public_repos || 0} repositories</span>
+                      <span className="text-sm">{userInfo.public_repos || 0} repositories</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <User className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{user.following || 0} following</span>
+                      <span className="text-sm">{userInfo.following || 0} following</span>
                     </div>
                   </div>
                 </div>
@@ -422,15 +434,15 @@ export default function ProfileClient() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Public Repositories</span>
-                      <Badge variant="secondary">{user.public_repos || 0}</Badge>
+                      <Badge variant="secondary">{userInfo.public_repos || 0}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Followers</span>
-                      <Badge variant="secondary">{user.followers || 0}</Badge>
+                      <Badge variant="secondary">{userInfo.followers || 0}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Following</span>
-                      <Badge variant="secondary">{user.following || 0}</Badge>
+                      <Badge variant="secondary">{userInfo.following || 0}</Badge>
                     </div>
                   </div>
                 </div>
