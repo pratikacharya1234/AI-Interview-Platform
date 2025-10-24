@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { createClient } from "@/lib/supabase/client"
+import { useSupabase } from "@/components/providers/supabase-provider"
 import {
   UserProfile,
   InterviewConfig,
@@ -22,10 +21,7 @@ import ResultsView from "./components/ResultsView"
 
 export default function AudioInterviewPage() {
   const router = useRouter()
-  const { data: authSession, status: authStatus } = useSession()
-  const [supabase] = useState(() => createClient())
-  const [user, setUser] = useState<any>(null)
-  const [authLoading, setAuthLoading] = useState(true)
+  const { supabase, user, loading: authLoading } = useSupabase()
   
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -80,32 +76,22 @@ export default function AudioInterviewPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   
-  // Check authentication on mount - use NextAuth session
+  // Check authentication on mount - use Supabase session
   useEffect(() => {
-    if (authStatus === 'loading') {
+    if (authLoading) {
       return // Wait for session to load
     }
-    
-    if (authStatus === 'authenticated' && authSession?.user) {
-      // User is authenticated via NextAuth
-      const authUser = {
-        id: authSession.user.email || 'user-' + Date.now(), // Use email as ID fallback
-        email: authSession.user.email,
-        name: authSession.user.name,
-      }
-      
-      setUser(authUser)
-      setAuthLoading(false)
-      
+
+    if (user) {
+      // User is authenticated via Supabase
       // Load profile after auth check
-      loadUserProfile(authUser)
+      loadUserProfile(user)
       initializeSpeechRecognition()
-    } else if (authStatus === 'unauthenticated') {
-      // ModernLayout will handle redirect, but just in case
-      console.log('No authenticated session')
-      setAuthLoading(false)
+    } else {
+      // ModernLayout will handle redirect
+      console.log('No authenticated user')
     }
-  }, [authStatus, authSession])
+  }, [authLoading, user])
   
   // Cleanup on unmount
   useEffect(() => {
@@ -134,24 +120,25 @@ export default function AudioInterviewPage() {
   }
   
   const loadUserProfile = async (authUser?: any) => {
+    const currentUser = authUser || user
+    if (!currentUser) {
+      console.log('No user available')
+      return
+    }
+
     try {
-      const currentUser = authUser || user
-      if (!currentUser) {
-        console.log('No user available')
-        return
-      }
       
       // For NextAuth users (email-based ID), just use the session data
       // Don't try to query Supabase with email as UUID
       const isEmailId = currentUser.id?.includes('@')
       
       if (isEmailId) {
-        // NextAuth user - use session data directly
+        // User with email-based ID - use user data directly
         setUserProfile({
           id: currentUser.id,
-          name: currentUser.name || currentUser.email?.split('@')[0] || 'User',
+          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User',
           email: currentUser.email || '',
-          avatar: authSession?.user?.image || undefined
+          avatar: currentUser.user_metadata?.avatar_url
         })
         return
       }
@@ -214,12 +201,12 @@ export default function AudioInterviewPage() {
     } catch (error) {
       console.error('Error in loadUserProfile:', error)
       // Don't redirect on profile errors, just use session data
-      if (authSession?.user) {
+      if (currentUser) {
         setUserProfile({
-          id: authSession.user.email || 'user',
-          name: authSession.user.name || authSession.user.email?.split('@')[0] || 'User',
-          email: authSession.user.email || '',
-          avatar: authSession.user.image || undefined
+          id: currentUser.id,
+          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email || '',
+          avatar: currentUser.user_metadata?.avatar_url
         })
       }
     }
@@ -651,7 +638,7 @@ export default function AudioInterviewPage() {
   
   // Render based on current view
   // Show loading while checking authentication
-  if (authLoading || authStatus === 'loading') {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">

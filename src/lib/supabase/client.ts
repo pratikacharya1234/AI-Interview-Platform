@@ -1,7 +1,17 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// Singleton instance
+let client: SupabaseClient | null = null
 
 export function createClient() {
-  return createBrowserClient(
+  // Return existing instance if it exists
+  if (client) {
+    return client
+  }
+
+  // Create new instance only if none exists
+  client = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -17,7 +27,7 @@ export function createClient() {
         set(name: string, value: string, options?: any) {
           if (typeof document !== 'undefined') {
             let cookieString = `${name}=${encodeURIComponent(value)}`
-            
+
             if (options?.maxAge) {
               cookieString += `; Max-Age=${options.maxAge}`
             }
@@ -33,7 +43,7 @@ export function createClient() {
             if (options?.secure) {
               cookieString += `; Secure`
             }
-            
+
             document.cookie = cookieString
           }
         },
@@ -45,4 +55,6 @@ export function createClient() {
       },
     }
   )
+
+  return client
 }
