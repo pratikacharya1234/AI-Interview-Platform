@@ -11,21 +11,42 @@ function parseCookieString(cookieString: string, name: string): string | null {
 
   // Find all cookie chunks (e.g., name.0, name.1, name.2)
   for (const cookie of cookies) {
-    const [key, value] = cookie.split('=')
-    if (key && key.startsWith(name)) {
-      chunks[key] = value || ''
+    const equalIndex = cookie.indexOf('=')
+    if (equalIndex === -1) continue
+
+    const key = cookie.substring(0, equalIndex).trim()
+    const value = cookie.substring(equalIndex + 1).trim()
+
+    if (key.startsWith(name)) {
+      chunks[key] = value
     }
   }
 
-  // If we have chunked cookies (name.0, name.1, etc.)
-  const chunkKeys = Object.keys(chunks).filter(k => k.match(new RegExp(`^${name}\\.\\d+$`))).sort()
+  // Check if we have chunked cookies (name.0, name.1, etc.)
+  const chunkPattern = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.\\d+$`)
+  const chunkKeys = Object.keys(chunks)
+    .filter(k => chunkPattern.test(k))
+    .sort((a, b) => {
+      // Sort by chunk number (e.g., name.0, name.1, name.2)
+      const aNum = parseInt(a.split('.').pop() || '0', 10)
+      const bNum = parseInt(b.split('.').pop() || '0', 10)
+      return aNum - bNum
+    })
+
   if (chunkKeys.length > 0) {
-    console.log(`Found ${chunkKeys.length} cookie chunks for ${name}`)
-    return chunkKeys.map(k => chunks[k]).join('')
+    console.log(`Found ${chunkKeys.length} cookie chunks for ${name}: ${chunkKeys.join(', ')}`)
+    const assembled = chunkKeys.map(k => chunks[k]).join('')
+    console.log(`Assembled cookie length: ${assembled.length}`)
+    return assembled
   }
 
   // Otherwise return the single cookie value
-  return chunks[name] || null
+  if (chunks[name]) {
+    console.log(`Found single cookie: ${name}`)
+    return chunks[name]
+  }
+
+  return null
 }
 
 export function createClient() {
@@ -47,10 +68,13 @@ export function createClient() {
 
           const value = parseCookieString(document.cookie, name)
 
-          if (value) {
-            console.log(`✓ Cookie retrieved: ${name} (length: ${value.length})`)
-          } else {
-            console.log(`⚠️ Cookie not found: ${name}`)
+          // Only log main auth token, not every lookup
+          if (name.includes('auth-token') && !name.match(/\.\d+$/)) {
+            if (value) {
+              console.log(`✓ Cookie retrieved: ${name} (length: ${value.length})`)
+            } else {
+              console.log(`⚠️ Cookie not found: ${name}`)
+            }
           }
 
           return value
