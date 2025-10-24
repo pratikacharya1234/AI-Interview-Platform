@@ -1,3 +1,4 @@
+import { useSupabase } from '@/components/providers/supabase-provider'
 'use client'
 
 /**
@@ -11,7 +12,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -44,7 +44,7 @@ type ConversationState = 'ai_speaking' | 'waiting_for_user' | 'user_speaking' | 
 
 export default function VideoInterviewNew() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { user, loading } = useSupabase()
   
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -496,7 +496,7 @@ export default function VideoInterviewNew() {
       mediaStreamRef.current.getTracks().forEach(track => track.stop())
     }
 
-    if (!session?.user?.email) return
+    if (!user?.email) return
 
     try {
       // Transform messages to match API expectations
@@ -509,8 +509,8 @@ export default function VideoInterviewNew() {
 
       const interviewData = {
         id: sessionId,
-        userId: session.user.email,
-        userEmail: session.user.email,
+        userId: user.email,
+        userEmail: user.email,
         startTime: startTime.toISOString(),
         endTime: new Date().toISOString(),
         duration: Math.round((Date.now() - startTime.getTime()) / 1000),
@@ -536,7 +536,7 @@ export default function VideoInterviewNew() {
       console.error('Save error:', err)
       setError('Failed to save interview.')
     }
-  }, [session, sessionId, startTime, messages, position, company, isVideoEnabled, router])
+  }, [user, sessionId, startTime, messages, position, company, isVideoEnabled, router])
 
   /**
    * Toggle video

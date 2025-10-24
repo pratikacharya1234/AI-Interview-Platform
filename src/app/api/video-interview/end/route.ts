@@ -1,3 +1,4 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 /**
  * API Route: End Video Interview Session
  * POST /api/video-interview/end
@@ -5,13 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { videoInterviewService } from '@/lib/services/video-interview-service'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const user = await requireAuth()
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

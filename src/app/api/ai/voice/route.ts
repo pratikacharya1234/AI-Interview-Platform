@@ -1,16 +1,16 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { voiceService } from '@/lib/services/ai-features-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const sessions = await voiceService.getSessions(session.user.email)
+    const sessions = await voiceService.getSessions(user.email)
     return NextResponse.json(sessions)
   } catch (error: any) {
     console.error('Error fetching voice sessions:', error)
@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const newSession = await voiceService.createSession(
       {
-        user_email: session.user.email,
+        user_email: user.email,
         session_name,
         duration,
         overall_score,

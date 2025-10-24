@@ -1,10 +1,10 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 /**
  * API Route: Get Video Interview Report
  * GET /api/video-interview/report/[reportId]
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -17,8 +17,8 @@ export async function GET(
   { params }: { params: Promise<{ reportId: string }> }
 ) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const user = await requireAuth()
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

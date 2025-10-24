@@ -1,5 +1,5 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { adaptiveLearningService } from '@/lib/services/adaptive-learning-service'
 import { createClient } from '@supabase/supabase-js'
 
@@ -10,22 +10,12 @@ const supabase = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const user = await requireAuth()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const { searchParams } = new URL(request.url)
+        const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
 
     if (action === 'paths') {
@@ -50,22 +40,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const user = await requireAuth()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const body = await request.json()
+        const body = await request.json()
     const { action, target_role, target_company, skill_name, score, path_id, progress } = body
 
     if (action === 'generate_path') {

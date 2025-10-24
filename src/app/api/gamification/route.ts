@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { gamificationService } from '@/lib/services/gamification-service-simple'
 import { createClient } from '@supabase/supabase-js'
 
@@ -12,25 +12,8 @@ const supabase = supabaseUrl && supabaseKey
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Use email as user ID if database is not available
-    let userId = session.user.email
-    
-    if (supabase) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (user) {
-        userId = user.id
-      }
-    }
+    const user = await requireAuth()
+    const userId = user.id
 
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
@@ -74,25 +57,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Use email as user ID if database is not available
-    let userId = session.user.email
-    
-    if (supabase) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (user) {
-        userId = user.id
-      }
-    }
+    const user = await requireAuth()
+    const userId = user.id
 
     const body = await request.json()
     const { action, xp_amount, source, context } = body

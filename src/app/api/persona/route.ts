@@ -1,11 +1,11 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { personaService } from '@/lib/services/persona-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const user = await requireAuth()
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const user = await requireAuth()
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

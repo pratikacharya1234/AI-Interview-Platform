@@ -1,7 +1,8 @@
 'use client'
 
+import { useSupabase } from '@/components/providers/supabase-provider'
+
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 
 interface AIFeatureMetrics {
   coaching_sessions_completed: number
@@ -24,7 +25,7 @@ interface AIFeaturesContextType {
 const AIFeaturesContext = createContext<AIFeaturesContextType | undefined>(undefined)
 
 export function AIFeaturesProvider({ children }: { children: ReactNode }) {
-  const { data: session } = useSession()
+  const { user, loading } = useSupabase()
   const [metrics, setMetrics] = useState<AIFeatureMetrics>({
     coaching_sessions_completed: 0,
     voice_sessions_completed: 0,
@@ -38,7 +39,7 @@ export function AIFeaturesProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   const refreshMetrics = useCallback(async () => {
-    if (!session?.user?.email) return
+    if (!user?.email) return
 
     setIsLoading(true)
     setError(null)
@@ -58,7 +59,7 @@ export function AIFeaturesProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [session?.user?.email])
+  }, [user?.email])
 
   // Load metrics on mount and when session changes
   useEffect(() => {

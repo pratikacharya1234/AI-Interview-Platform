@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { resumeService } from '@/lib/services/resume-service'
 import { createClient } from '@supabase/supabase-js'
 
@@ -10,22 +10,10 @@ const supabase = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const user = await requireAuth()
+    const userId = user.id
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const resumeData = await resumeService.getResumeData(user.id)
+    const resumeData = await resumeService.getResumeData(userId)
     return NextResponse.json(resumeData)
   } catch (error: any) {
     console.error('Error fetching resume:', error)
@@ -38,20 +26,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await requireAuth()
+    const userId = user.id
 
     const body = await request.json()
     const { resume_text, action } = body

@@ -1,28 +1,14 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()
     const supabase = await createClient(cookieStore)
-    const session = await getServerSession(authOptions)
+    const user = await requireAuth()
 
-    if (!session || !session.user || !(session.user as any).id) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Not authenticated', 
-          interviews: [] 
-        }, 
-        { status: 401 }
-      )
-    }
-
-    const user = session.user as { id: string; email: string | null };
-    
     // Fetch user's interviews from database
     const { data: interviews, error } = await supabase
       .from('interview_sessions')

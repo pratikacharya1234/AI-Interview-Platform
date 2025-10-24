@@ -1,6 +1,5 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
@@ -41,8 +40,8 @@ export async function POST(request: NextRequest) {
     
     if (authError || !user) {
       // Try NextAuth session as fallback
-      const session = await getServerSession(authOptions)
-      if (!session?.user?.email) {
+      const user = await requireAuth()
+      if (!user.email) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const userEmail = user?.email || (await getServerSession(authOptions))?.user?.email
+    const userEmail = user?.email
     const interviewData: InterviewSession = await request.json()
     
     // Validate the interview data

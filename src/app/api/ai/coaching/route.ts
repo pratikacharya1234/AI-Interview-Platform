@@ -1,12 +1,12 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { coachingService } from '@/lib/services/ai-features-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(data)
     } else {
       // Get all sessions for user
-      const sessions = await coachingService.getSessions(session.user.email)
+      const sessions = await coachingService.getSessions(user.email)
       return NextResponse.json(sessions)
     }
   } catch (error: any) {
@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (action === 'create_session') {
       const newSession = await coachingService.createSession({
         ...data,
-        user_email: session.user.email
+        user_email: user.email
       })
       return NextResponse.json(newSession, { status: 201 })
     }

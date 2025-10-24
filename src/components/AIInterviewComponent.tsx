@@ -1,7 +1,8 @@
 'use client'
 
+import { useSupabase } from '@/components/providers/supabase-provider'
+
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -386,7 +387,7 @@ function QuestionDisplay({ question, questionNumber, totalQuestions, onSubmit, i
 }
 
 export default function AIInterviewComponent() {
-  const { data: session } = useSession()
+  const { user, loading } = useSupabase()
   const interview = useInterview({
     onQuestionComplete: (response) => {
       console.log('Question completed:', response)

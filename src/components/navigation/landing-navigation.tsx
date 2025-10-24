@@ -1,8 +1,10 @@
 'use client'
 
+import { useSupabase } from '@/components/providers/supabase-provider'
+import { signInWithGitHub } from '@/lib/auth/client-auth'
+
 import { useState } from 'react'
 import Link from 'next/link'
-import { useSession, signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { 
   Menu, 
@@ -16,7 +18,7 @@ import {
 
 export function LandingNavigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { data: session } = useSession()
+  const { user, loading } = useSupabase()
 
   const navigationItems = [
     { name: 'Features', href: '#features' },
@@ -54,27 +56,27 @@ export function LandingNavigation() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {session ? (
+            {user ? (
               <div className="flex items-center space-x-4">
                 <Link href="/dashboard">
                   <Button variant="outline">Dashboard</Button>
                 </Link>
                 <div className="flex items-center space-x-2">
-                  <img 
-                    src={session.user?.image || ''} 
-                    alt={session.user?.name || ''} 
+                  <img
+                    src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email || 'User')}`}
+                    alt={user?.user_metadata?.full_name || user?.email || 'User'}
                     className="w-8 h-8 rounded-full"
                   />
                   <span className="text-sm font-medium text-gray-700">
-                    {session.user?.name?.split(' ')[0]}
+                    {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0]}
                   </span>
                 </div>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <Button 
+                <Button
                   variant="outline"
-                  onClick={() => signIn('github', { callbackUrl: '/dashboard' })}
+                  onClick={() => signInWithGitHub()}
                 >
                   Sign In with GitHub
                 </Button>
@@ -109,28 +111,28 @@ export function LandingNavigation() {
                 </a>
               ))}
               <div className="border-t border-gray-200 pt-4 px-4">
-                {session ? (
+                {user ? (
                   <div className="space-y-2">
                     <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
                       <Button className="w-full">Dashboard</Button>
                     </Link>
                     <div className="flex items-center space-x-2 py-2">
-                      <img 
-                        src={session.user?.image || ''} 
-                        alt={session.user?.name || ''} 
+                      <img
+                        src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email || 'User')}`}
+                        alt={user?.user_metadata?.full_name || user?.email || 'User'}
                         className="w-6 h-6 rounded-full"
                       />
                       <span className="text-sm text-gray-700">
-                        {session.user?.name}
+                        {user?.user_metadata?.full_name || user?.email}
                       </span>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Button 
+                    <Button
                       className="w-full"
                       onClick={() => {
-                        signIn('github', { callbackUrl: '/dashboard' })
+                        signInWithGitHub()
                         setIsMenuOpen(false)
                       }}
                     >

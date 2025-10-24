@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { videoInterviewService } from '@/lib/services/video-interview-service'
 import { createClient } from '@supabase/supabase-js'
 
@@ -15,21 +15,8 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get user ID from email
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await requireAuth()
+    const userId = user.id
 
     const body = await request.json()
     const { persona_id, job_title, interview_type, difficulty } = body

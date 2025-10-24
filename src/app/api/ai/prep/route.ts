@@ -1,12 +1,12 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { prepService } from '@/lib/services/ai-features-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get active prep plan
-    const plan = await prepService.getActivePlan(session.user.email)
+    const plan = await prepService.getActivePlan(user.email)
     return NextResponse.json(plan)
   } catch (error: any) {
     console.error('Error fetching prep plan:', error)
@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (action === 'create_plan') {
       const newPlan = await prepService.createPlan({
         ...data,
-        user_email: session.user.email
+        user_email: user.email
       })
       return NextResponse.json(newPlan, { status: 201 })
     }

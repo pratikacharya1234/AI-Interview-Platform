@@ -1,16 +1,16 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { metricsService } from '@/lib/services/ai-features-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const metrics = await metricsService.getMetrics(session.user.email)
+    const metrics = await metricsService.getMetrics(user.email)
     return NextResponse.json(metrics)
   } catch (error: any) {
     console.error('Error fetching metrics:', error)
@@ -23,14 +23,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const user = await requireAuth()
     
-    if (!session?.user?.email) {
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await metricsService.updateMetrics(session.user.email)
-    const updatedMetrics = await metricsService.getMetrics(session.user.email)
+    await metricsService.updateMetrics(user.email)
+    const updatedMetrics = await metricsService.getMetrics(user.email)
     
     return NextResponse.json(updatedMetrics)
   } catch (error: any) {

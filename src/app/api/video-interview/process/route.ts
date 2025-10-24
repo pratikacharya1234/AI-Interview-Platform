@@ -1,3 +1,4 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 /**
  * API Route: Process Audio Chunk
  * POST /api/video-interview/process
@@ -5,7 +6,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
 import { videoInterviewService } from '@/lib/services/video-interview-service'
 import { videoAIService } from '@/lib/services/video-ai-service'
 import { createClient } from '@supabase/supabase-js'
@@ -17,8 +17,8 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const user = await requireAuth()
+    if (!user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

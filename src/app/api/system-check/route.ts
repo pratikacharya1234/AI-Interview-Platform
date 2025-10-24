@@ -1,6 +1,5 @@
+import { requireAuth } from '@/lib/auth/supabase-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
@@ -16,10 +15,10 @@ export async function GET(request: NextRequest) {
 
   try {
     // 1. Check Authentication
-    const session = await getServerSession(authOptions)
+    const user = await requireAuth()
     results.services.authentication = {
-      status: session ? 'connected' : 'not authenticated',
-      user: session?.user?.email || null
+      status: user ? 'connected' : 'not authenticated',
+      user: user.email || null
     }
 
     // 2. Check Supabase Connection
