@@ -1,6 +1,34 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
+// Helper function to parse chunked cookies from request
+function getChunkedCookie(request: NextRequest, name: string): string | undefined {
+  // Check if we have chunked cookies (name.0, name.1, etc.)
+  const chunks: string[] = []
+  let chunkIndex = 0
+
+  while (true) {
+    const chunkName = `${name}.${chunkIndex}`
+    const chunkValue = request.cookies.get(chunkName)?.value
+
+    if (!chunkValue) {
+      break
+    }
+
+    chunks.push(chunkValue)
+    chunkIndex++
+  }
+
+  // If we found chunks, reassemble them
+  if (chunks.length > 0) {
+    console.log(`Found ${chunks.length} cookie chunks for ${name}`)
+    return chunks.join('')
+  }
+
+  // Otherwise return the single cookie value
+  return request.cookies.get(name)?.value
+}
+
 export async function middleware(request: NextRequest) {
   // Skip middleware for static files and API routes
   if (
@@ -24,7 +52,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          return getChunkedCookie(request, name)
         },
         set(name: string, value: string, options: CookieOptions) {
           const cookieOptions = {
